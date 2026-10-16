@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DSI Mock Exams</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<main class="wrap">
+  <section class="hero">
+    <h1>CS 6422 mock exams</h1>
+    <p>Five practice exams in the final-exam format, covering Modules 1–8 and Papers 1–4.</p>
+  </section>
+
+  <div class="facts">
+    <div class="fact"><b>35</b><span>graded questions, 50 points</span></div>
+    <div class="fact"><b>25</b><span>True/False (20 module, 5 paper)</span></div>
+    <div class="fact"><b>10</b><span>numeric (5 × 2 pts, 5 × 3 pts)</span></div>
+  </div>
+
+  <h2 class="section">Exams</h2>
+  <ul class="exam-list" id="exams"></ul>
+
+  <h2 class="section">How to use</h2>
+  <ul class="notes">
+    <li><b>Exam mode</b> hides answers until you submit, then shows your score out of 50 and an explanation for every question.</li>
+    <li><b>Study mode</b> checks each answer as soon as you give it.</li>
+    <li>Numeric answers are exact whole numbers. Commas are fine (25,075 or 25075).</li>
+    <li>After grading, use <i>Show only missed</i> to review what you got wrong. Your answers are saved in this browser.</li>
+  </ul>
+
+  <h2 class="section">Coverage</h2>
+  <ul class="notes">
+    <li>Relational model and SQL: keys, joins, projection, grouping, NULLs.</li>
+    <li>Transactions and recovery: ACID, logging, commit and abort.</li>
+    <li>Storage: serialization, C++ ownership and lifetimes, the storage hierarchy, page files.</li>
+    <li>Slotted pages, free lists and index construction.</li>
+    <li>Hash indexing: linear, quadratic and double probing, tombstones.</li>
+    <li>Buffer management: pinning, dirty pages, LRU, 2Q.</li>
+    <li>Multi-threading: races, mutexes, reader/writer locks, fine-grained locking.</li>
+    <li>Papers: Codd 1970; Stonebraker &amp; Pavlo 2024; Stonebraker 1981; Neumann &amp; Freitag 2020 (Umbra).</li>
+  </ul>
+
+  <footer>
+    These are original practice questions modeled on the course practice sheets, not official exam content.
+    Numeric answer keys are computed by the simulators in <code>tools/sim.py</code>.
+  </footer>
+</main>
+<script src="data/exams.js"></script>
+<script>
+(function () {
+  var list = document.getElementById("exams");
+  window.EXAMS.forEach(function (ex) {
+    var best = null;
+    try { best = localStorage.getItem("dsi-best-" + ex.id); } catch (e) {}
+    var li = document.createElement("li");
+    li.innerHTML =
+      '<a class="name" href="exam.html?id=' + ex.id + '">' + ex.title + "</a>" +
+      '<span class="meta">' + (best !== null ? "Best " + best + " / 50" : "Not attempted") + "</span>";
+    list.appendChild(li);
+  });
+})();
+</script>
+</body>
+</html>

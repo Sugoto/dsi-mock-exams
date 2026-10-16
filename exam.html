@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mock Exam</title>
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="bar">
+  <div class="wrap">
+    <a class="back" href="index.html">All exams</a>
+    <span class="title" id="title">Mock Exam</span>
+    <span class="progress" id="progress"></span>
+    <span class="seg" role="group" aria-label="Mode">
+      <button type="button" data-mode="exam" aria-pressed="true">Exam</button>
+      <button type="button" data-mode="study" aria-pressed="false">Study</button>
+    </span>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="result" id="result" aria-live="polite"></section>
+  <div id="quiz"></div>
+  <div class="submit-row">
+    <button type="button" id="reset">Reset answers</button>
+    <button type="button" class="primary" id="submit">Submit exam</button>
+  </div>
+</main>
+
+<script src="data/exams.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
