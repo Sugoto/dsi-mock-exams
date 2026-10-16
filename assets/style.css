@@ -43,10 +43,6 @@ a:hover { text-decoration: underline; }
 .bar .back { color: var(--muted); font-size: 14px; }
 .progress { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
 
-.seg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
-.seg button { border: 0; border-radius: 0; background: var(--surface); padding: 5px 12px; font-size: 14px; color: var(--muted); }
-.seg button + button { border-left: 1px solid var(--line-strong); }
-.seg button[aria-pressed="true"] { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
 
 button {
   font: inherit; cursor: pointer;

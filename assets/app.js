@@ -22,7 +22,7 @@
   function load() {
     var s = null;
     try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
-    return s && s.answers ? s : { answers: {}, checked: {}, mode: "exam", submitted: false };
+    return s && s.answers ? s : { answers: {}, checked: {}, submitted: false };
   }
 
   function save() {
@@ -42,7 +42,6 @@
 
   function isGraded(q) {
     if (state.submitted) return true;
-    if (state.mode !== "study") return false;
     if (q.type === "num") return !!state.checked[q.n];
     return state.answers[q.n] !== undefined;
   }
@@ -94,7 +93,7 @@
         progress();
       });
       input.addEventListener("keydown", function (ev) {
-        if (ev.key === "Enter" && state.mode === "study") check(q);
+        if (ev.key === "Enter") check(q);
       });
       var btn = el("button", "check", "Check");
       btn.type = "button";
@@ -130,6 +129,7 @@
     state.checked[q.n] = true;
     save();
     paint(q);
+    progress();
   }
 
   function paint(q) {
@@ -145,7 +145,7 @@
       var input = c.querySelector("input");
       input.disabled = state.submitted;
       var btn = c.querySelector(".check");
-      btn.style.display = state.mode === "study" && !state.submitted ? "" : "none";
+      btn.style.display = state.submitted ? "none" : "";
     } else {
       c.querySelectorAll(".tf button").forEach(function (b) {
         var v = q.type === "ack" ? b.dataset.value : b.dataset.value === "true";
@@ -169,10 +169,6 @@
 
   function paintAll() {
     exam.questions.forEach(paint);
-    document.querySelectorAll(".seg button").forEach(function (b) {
-      b.setAttribute("aria-pressed", String(b.dataset.mode === state.mode));
-      b.disabled = state.submitted;
-    });
     document.getElementById("submit").disabled = state.submitted;
     progress();
     result();
@@ -184,7 +180,14 @@
       var a = state.answers[q.n];
       return a !== undefined && a !== "";
     }).length;
-    document.getElementById("progress").textContent = done + " / " + graded.length + " answered";
+    var earned = 0, possible = 0;
+    graded.forEach(function (q) {
+      if (!isGraded(q)) return;
+      possible += q.points;
+      if (isCorrect(q)) earned += q.points;
+    });
+    document.getElementById("progress").textContent =
+      done + " / " + graded.length + " answered · " + earned + " / " + possible + " pts so far";
   }
 
   // ---------- Scoring ----------
@@ -253,7 +256,7 @@
   }
 
   function reset() {
-    state = { answers: {}, checked: {}, mode: state.mode, submitted: false };
+    state = { answers: {}, checked: {}, submitted: false };
     save();
     document.getElementById("quiz").classList.remove("hide-correct");
     render();
@@ -261,15 +264,6 @@
   }
 
   // ---------- Controls ----------
-  document.querySelectorAll(".seg button").forEach(function (b) {
-    b.addEventListener("click", function () {
-      if (state.submitted) return;
-      state.mode = b.dataset.mode;
-      save();
-      paintAll();
-    });
-  });
-
   document.getElementById("submit").addEventListener("click", function () {
     var unanswered = exam.questions.filter(function (q) {
       var a = state.answers[q.n];

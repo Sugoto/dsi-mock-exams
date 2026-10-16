@@ -7,7 +7,7 @@ Five practice exams for CS 6422 (Database System Implementation), in the final-e
 - Questions 21–30: numeric answers (21–25 are 2 points, 26–30 are 3 points)
 - Questions 31–35: True/False on Papers 1–4 (1 point each)
 
-Open `index.html` locally or use the GitHub Pages site. Exam mode grades on submit; Study mode gives feedback as you answer. Progress is saved in your browser's localStorage.
+Open `index.html` locally or use the GitHub Pages site. Every answer is graded immediately; finishing shows the total score out of 50 and missed topics. Progress is saved in your browser's localStorage.
 
 ## Regenerating the questions
 
