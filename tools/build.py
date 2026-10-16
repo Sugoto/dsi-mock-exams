@@ -83,8 +83,8 @@ ACID = [
        "Without a commit record the transaction never committed, so recovery must undo its effects."),
     tf(TX, False, "Durability by itself prevents two concurrent deposits from overwriting each other's update.",
        "Lost updates are an isolation failure. Both deposits can commit durably and one can still overwrite the other."),
-    tf(TX, True, "Rewriting a data file by writing a temporary file and then atomically renaming it over the original means readers see either the old file or the new file, never a partial one.",
-       "rename within one directory is atomic, so the switch from old file to new file happens in a single step."),
+    tf(TX, False, "Overwriting a data file in place with a single large write() call guarantees that concurrent readers and post-crash readers never see a partially updated file.",
+       "An in-place write can be observed mid-way or torn by a crash. Writing a temporary file and then atomically renaming it over the original gives readers either the old file or the new file."),
     tf(TX, True, "A transaction that is atomic and durable can still violate consistency if it leaves a foreign key pointing at a row that no longer exists.",
        "Consistency means every declared constraint holds after the transaction. Atomicity and durability don't check constraints."),
     tf(TX, True, "To undo an uncommitted update after a crash, recovery needs the update's old value (its before-image) or equivalent information.",
@@ -171,7 +171,7 @@ SLOTTED = [
        "A hit in the map avoids storage I/O. Only misses read from disk."),
 ]
 
-HX = "Hash indexing"
+HX = "Hash tables (M7)"
 HASHING = [
     tf(HX, True, "With linear probing, a long run of occupied slots tends to keep growing, because any key that hashes anywhere into the run lands at its end.",
        "This is primary clustering, and it lengthens probe sequences."),
@@ -252,6 +252,62 @@ THREADS = [
     tf(MT, True, "Under one global index mutex, two lookups for keys in different slots still execute one at a time.",
        "A single mutex serializes every operation, whatever slot it touches."),
 ]
+
+
+HX7 = "Hash tables (M7)"
+HASH7 = [
+    tf(HX7, True, "Open-addressing deletes need at least three slot states (never used, occupied, deleted/tombstone) to keep lookups correct.",
+       "With only empty and occupied, a delete would either break probe chains (if marked empty) or never free the slot."),
+    tf(HX7, False, "In open addressing, a key's final slot depends only on its own hash value, not on which keys were inserted before it.",
+       "Earlier keys occupy slots along the probe sequence, so the same key can land in different slots depending on insertion history."),
+    tf(HX7, True, "If an entry also stores its key's home slot, (slot − home) mod capacity tells how many positions past home the key was placed by linear probing.",
+       "That displacement is the number of extra probes a successful lookup of that key will make."),
+    tf(HX7, False, "With double hashing p_i(k) = (h1(k) + i·h2(k)) mod m, the third probe position can only be found by first computing the first and second probes.",
+       "Each position has a closed form: p_i = (h1 + i·h2) mod m, so any probe position can be computed directly."),
+    tf(HX7, True, "Inserting the same two colliding keys in the opposite order into an empty linear-probing table can swap which slot each key ends up in.",
+       "Whichever key arrives first takes the home slot, and the second goes to the next free slot."),
+    tf(HX7, False, "A lookup that returns std::optional<Value> still needs a sentinel value such as −1 to signal that a key is missing.",
+       "std::nullopt represents absence, so no sentinel has to be reserved from the value domain."),
+    tf(HX7, True, "A hash index backed by a std::vector sized once at construction can't hold more entries than its capacity without being rebuilt into a larger vector.",
+       "Open addressing stores entries in the array itself, so growing it means allocating a bigger array and rehashing."),
+    tf(HX7, False, "h2(k) = k mod m is a safe secondary hash for double hashing.",
+       "It returns 0 for every multiple of m, and a step of 0 probes the same slot forever. That's why definitions use 1 + (k mod m′)."),
+    tf(HX7, False, "Inserting a key that already exists in an open-addressing table should add a second entry at the first free slot of its probe sequence.",
+       "The insert should find the existing entry and update it in place, otherwise lookups return a stale value and the table holds duplicates."),
+    tf(HX7, True, "Two keys with the same h1 but different h2 values follow different probe sequences after their first probe under double hashing.",
+       "Both start at h1, but then step by different amounts, which is how double hashing avoids secondary clustering."),
+]
+
+TS = "Thread-safe hash table (M8)"
+HASH8 = [
+    tf(TS, True, "A std::shared_lock on a std::shared_mutex holds it in shared mode, so many lookups can hold it at the same time.",
+       "Shared mode is compatible with other shared holders. Only exclusive mode excludes everyone."),
+    tf(TS, False, "A thread holding a shared lock on a std::shared_mutex can safely upgrade to exclusive mode by calling lock() on the same mutex.",
+       "std::shared_mutex has no upgrade. Calling lock() while holding a shared lock deadlocks or is undefined; the thread must release the shared lock first."),
+    tf(TS, True, "If two threads each hold a shared lock on the same std::shared_mutex and both then wait for the exclusive lock, they can deadlock.",
+       "Each waits for the other to release its shared hold, and neither does. This is the classic upgrade deadlock."),
+    tf(TS, True, "For a read-mostly workload, one table-wide std::shared_mutex can outperform one table-wide std::mutex, because lookups no longer run one at a time.",
+       "Readers share the lock. With a plain mutex every lookup serializes."),
+    tf(TS, False, "For a workload in which every operation is an insert, replacing a global std::mutex with a global std::shared_mutex substantially increases throughput.",
+       "Inserts need exclusive mode, so they still run one at a time, and shared_mutex bookkeeping can even add overhead."),
+    tf(TS, False, "Under per-slot locking, an insert that probes slots 4, 5 and 6 can release slot 4's lock before examining slot 5 with no risk of races, because only the final slot is written.",
+       "Releasing early lets another thread change the probe chain mid-insert, for example inserting the same key, so the insert can create a duplicate or miss an existing entry."),
+    tf(TS, True, "If every thread acquires slot locks in increasing slot order, two threads following that rule can't form a circular wait on those locks.",
+       "A global lock order removes the circular-wait condition for deadlock."),
+    tf(TS, False, "Lock striping, with one lock per group of slots, allows more parallelism than one lock per slot.",
+       "Striping trades parallelism for fewer lock objects: unrelated slots in the same stripe now contend."),
+    tf(TS, True, "With 4 lock stripes and stripe = slot mod 4, operations on slots 1 and 5 contend for the same lock.",
+       "1 mod 4 = 5 mod 4 = 1, so both slots share stripe 1."),
+    tf(TS, True, "A lookup that skips locking can observe a half-written entry while another thread is inserting into that slot.",
+       "The key and value writes aren't atomic as a pair, so an unsynchronized reader can see the new key with the old value, a data race."),
+    tf(TS, True, "If every request hashes to the same slot, per-slot locking behaves roughly like a single global lock.",
+       "All requests contend for one lock, so finer granularity buys no parallelism."),
+    tf(TS, False, "A std::shared_mutex lets a writer in exclusive mode proceed while readers still hold it in shared mode.",
+       "Exclusive mode waits until every shared holder has released the mutex."),
+]
+
+THREADS_GENERAL_IDX = [0, 1, 2, 3, 5, 6, 8]
+THREADS_INDEX_IDX = [4, 7, 9]
 
 # ---------------------------------------------------------------------------
 # Paper true/false (5 per exam)
@@ -357,9 +413,10 @@ def exam1_numeric():
     serial, final = 500 + 250 - 100, 500 - 100
     q.append(num(TX, 2, "A balance starts at 500. Clerk 1 reads 500 and plans to write 750 (a deposit of 250). Clerk 2 also reads 500 and plans to write 400 (a withdrawal of 100). Clerk 1 writes 750, then Clerk 2 writes 400. By how many dollars does the final balance differ from the serial result?",
                  serial - final, f"Serial result: 500 + 250 − 100 = {serial}. Clerk 2's write overwrites Clerk 1's, leaving {final}. Difference = {serial - final}."))
-    total = 180 * 100 + 20 * 50000
-    q.append(num(ST, 2, "A workload performs 200 page accesses. 180 are served from DRAM at 100 ns each and 20 from an SSD at 50,000 ns each. What is the average service time per access, in nanoseconds?",
-                 total // 200, f"Total = 180 × 100 + 20 × 50,000 = {fmt(total)} ns. {fmt(total)} / 200 = {fmt(total // 200)} ns."))
+    keys = [12, 25, 32, 47, 55, 61, 72]
+    homes = [k % 10 for k in keys]
+    q.append(num(TS, 2, "A thread-safe hash index with capacity 10 uses one exclusive mutex per slot, and each insert locks only its home slot (key mod 10). Inserts for keys 12, 25, 32, 47, 55, 61 and 72 arrive at the same time. What is the largest number of these inserts whose critical sections can run at once?",
+                 len(set(homes)), f"Home slots: {', '.join(map(str, homes))}. Inserts on the same slot wait for each other, so at most one per distinct slot runs: {len(set(homes))}."))
 
     trace = [1, 2, 3, 1, 4, 5, 2, 6, 1, 7]
     _, ev, _, _ = sim.twoq(4, trace)
@@ -395,14 +452,15 @@ def exam2_numeric():
                  500 + 120 - 50, "Keep T1 and T3: 500 + 120 − 50 = 570. T2 never committed and T4 aborted."))
     q.append(num(MT, 2, "A shared counter starts at 1000. Eight threads each run a loop of two iterations; each iteration locks the same mutex, adds 25 and unlocks. What is the counter's final value?",
                  1000 + 8 * 2 * 25, "The mutex serializes all 16 increments: 1000 + 16 × 25 = 1400."))
-    q.append(num(SP, 2, "A file of fixed-size pages is 1,310,720 bytes long and PAGE_SIZE = 4096. Pages are numbered from 0. What is the page id of the last page?",
-                 1310720 // 4096 - 1, "num_pages = 1,310,720 / 4096 = 320, so ids run 0–319."))
+    p3 = (47 % 11 + 3 * (1 + 47 % 7)) % 11
+    q.append(num(HX7, 2, "A double-hashing table has m = 11 slots, h1(k) = k mod 11, h2(k) = 1 + (k mod 7) and p_i(k) = (h1(k) + i·h2(k)) mod 11 for i = 0, 1, 2, … For key 47, which slot is probe p_3 (the fourth probe)?",
+                 p3, f"h1(47) = 3 and h2(47) = 1 + 5 = 6. p_3 = (3 + 3 × 6) mod 11 = 21 mod 11 = {p3}."))
     likes = [7, 3, 7, 9, 3, 7, 1]
     q.append(num(REL, 2, "Likes contains rows with PostID values 7, 3, 7, 9, 3, 7, 1. How many rows does SELECT PostID, COUNT(*) FROM Likes GROUP BY PostID return?",
                  len(set(likes)), "One row per distinct PostID: 1, 3, 7, 9, so 4 rows. Post 7's count is 3."))
 
     reqs = [("r", 3), ("r", 11), ("w", 19), ("w", 5), ("r", 13), ("r", 6), ("w", 14)]
-    q.append(num(MT, 3, "Capacity 8. Each request locks slot key mod 8. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 3; read 11; write 19; write 5; read 13; read 6; write 14. How many requests proceed?",
+    q.append(num(TS, 3, "A thread-safe hash index has capacity 8 and per-slot reader/writer locks. Each request locks slot key mod 8. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 3; read 11; write 19; write 5; read 13; read 6; write 14. How many requests proceed?",
                  sim.rw_proceed(8, reqs), "Slots: 3, 3, 3, 5, 5, 6, 6. Proceed: read 3, read 11 (shares slot 3), write 5, read 6. Blocked: write 19 (readers on slot 3), read 13 (writer on slot 5), write 14 (reader on slot 6). Total 4."))
     edges = [(1, 2), (3, 4), (2, 3), (5, 6), (6, 7), (7, 5), (8, 9), (9, 10)]
     q.append(num(MT, 3, "Eight transfers are ready, and each locks both accounts it touches: (1,2), (3,4), (2,3), (5,6), (6,7), (7,5), (8,9), (9,10). What is the largest number that can run at the same time without two transfers sharing an account?",
@@ -416,14 +474,11 @@ def exam2_numeric():
     tm, _, _, _ = sim.twoq(3, trace)
     q.append(num(BM, 3, f"Compare LRU and 2Q, each with capacity 3 and starting empty, on the trace {', '.join(map(str, trace))}. Each miss causes one disk load. {TWOQ_RULES} How many disk loads does 2Q avoid relative to LRU?",
                  lm - tm, f"LRU: {lm} loads. 2Q: {tm} loads. Page 1 is promoted to LRU in 2Q and survives the scan of 3–7. Difference = {lm - tm}."))
-    b = 2500
-    b -= b * 12 // 100
-    b1 = b
-    b += 340
-    b2 = b
-    b -= b // 3
-    q.append(num(TX, 3, "An account starts at 2500. Three isolated transactions run serially: T1 withdraws 12% of the current balance, T2 deposits 340, and T3 withdraws one third of the current balance. Percentages and fractions use integer division (the amount withdrawn is rounded down). What is the final balance?",
-                 b, f"T1: 2500 − 300 = {b1}. T2: {b1} + 340 = {b2}. T3: {b2} − {b2 // 3} = {b}."))
+    keys = [14, 24, 5, 34, 15, 4]
+    slots = sim.linear_slots(10, keys)
+    disp = [(slots[k] - k % 10) % 10 for k in keys]
+    q.append(num(HX7, 3, "A ten-slot table starts empty and uses h(k) = k mod 10 with linear probing. Each entry also records its key's home slot, so its displacement is (slot − home) mod 10. Insert keys 14, 24, 5, 34, 15 and 4 in that order. What is the sum of the six keys' displacements?",
+                 sum(disp), "Final slots: " + ", ".join(f"{k}→{slots[k]}" for k in keys) + f". Displacements: {', '.join(map(str, disp))}. Sum = {sum(disp)}."))
     return q
 
 
@@ -438,8 +493,9 @@ def exam3_numeric():
     q.append(num(HX, 2, "A 10-slot hash index uses h(key) = key mod 10 with linear probing. Lookups stop at a never-used slot and skip tombstones. An insert remembers the first tombstone, keeps probing for an existing copy of the key, and otherwise reuses that tombstone. Operations: insert 13; insert 23; insert 33; delete 23; insert 43. Which slot receives key 43?",
                  sim.linear_ops(10, [("ins", 13), ("ins", 23), ("ins", 33), ("del", 23), ("ins", 43)]),
                  "13 → 3, 23 → 4, 33 → 5. Deleting 23 leaves a tombstone at 4. Inserting 43 probes 3 (taken), 4 (tombstone, remembered), 5 (taken), 6 (never used, so 43 is absent) and reuses slot 4."))
-    q.append(num(MT, 2, "A parallel index build scans 47 pages with 6 workers. Each of the first five workers receives floor(47 / 6) pages, and the last worker receives the rest. How many more pages does the last worker scan than worker 0?",
-                 (47 - 5 * (47 // 6)) - 47 // 6, "floor(47/6) = 7. The last worker gets 47 − 35 = 12. 12 − 7 = 5."))
+    keys = [3, 18, 7, 21, 34, 11, 40]
+    q.append(num(TS, 2, "A 16-slot hash index uses 4 lock stripes: key k goes to slot k mod 16, and slot s is protected by stripe s mod 4. Inserts take their stripe exclusively. In one time step, inserts for keys 3, 18, 7, 21, 34, 11 and 40 arrive in that order. An insert proceeds if its stripe is free; otherwise it blocks and holds nothing. How many inserts proceed?",
+                 sim.rw_proceed(4, [("w", k) for k in keys]), "Slots: 3, 2, 7, 5, 2, 11, 8, so stripes: 3, 2, 3, 1, 2, 3, 0. Proceed: 3 (stripe 3), 18 (stripe 2), 21 (stripe 1), 40 (stripe 0). Blocked: 7, 34, 11. Total 4."))
     q.append(num(REL, 2, "Users has 4 rows. Posts has 9 rows, and every post's non-NULL UserID references an existing Users.UserID (the primary key). How many rows does the inner join Users ⋈ Posts on UserID produce?",
                  9, "Each post matches exactly one user, because the join is from a foreign key to a primary key, so the result has one row per post: 9."))
 
@@ -481,9 +537,9 @@ def exam4_numeric():
             have.add(r)
     q.append(num(BM, 2, "A page map initially holds page ids 3, 6, 9 and 12. Requests arrive for 6, 1, 3, 15, 1, 12 and 20. Each miss reads one 4096-byte page and adds it to the map; nothing is evicted. How many bytes are read?",
                  len(misses) * 4096, f"Misses: {', '.join(map(str, misses))} (the second request for 1 is a hit). {len(misses)} × 4096 = {fmt(len(misses) * 4096)}."))
-    total = 950 * 80 + 50 * 20000
-    q.append(num(ST, 2, "1000 page accesses have a 95% buffer hit rate. Hits cost 80 ns from DRAM; misses cost 20,000 ns from SSD. What is the average access time in nanoseconds?",
-                 total // 1000, f"950 × 80 + 50 × 20,000 = {fmt(total)} ns. {fmt(total)} / 1000 = {total // 1000} ns."))
+    ops = [("ins", 6), ("ins", 16), ("ins", 26), ("ins", 36), ("del", 16), ("del", 26)]
+    q.append(num(HX7, 2, "A ten-slot table uses h(k) = k mod 10 with linear probing. Lookups skip tombstones and stop at the key or at a never-used slot. Operations: insert 6; insert 16; insert 26; insert 36; delete 16; delete 26. A lookup for key 46 (not present) follows. How many slots does that lookup examine, counting the never-used slot that ends it?",
+                 sim.lookup_probes(10, ops, 46), "6, 16, 26, 36 fill slots 6–9. The deletes leave tombstones at 7 and 8. The lookup checks 6 (key 6), 7 (tombstone), 8 (tombstone), 9 (key 36), then 0 (never used): 5 slots."))
     pages = 67108864 // 4096
     bits = pages * 4
     q.append(num(SP, 2, "A database holds 64 MiB (67,108,864 bytes) of 4096-byte data pages. A free-space map stores 4 bits per data page, in 4096-byte pages, and tracks only data pages. How many pages does the free-space map occupy?",
@@ -500,7 +556,7 @@ def exam4_numeric():
     q.append(num(SP, 3, "A fixed-length record page starts with slots 0–11 occupied, free-list head = −1 and next_unused = 12. A delete pushes its slot onto the front of the free list. An insert takes the free-list head, or next_unused if the list is empty. Operations: delete 4; delete 9; delete 1; insert; insert; delete 6; insert; insert; insert. Which slot receives the final insert?",
                  sim.free_list(12, ops), "After the deletes the list is [1, 9, 4]. The inserts take 1, then 9. Delete 6 gives [6, 4]. The inserts take 6, then 4, and the last one uses next_unused = 12."))
     reqs = [("r", 4), ("w", 14), ("r", 24), ("r", 7), ("r", 17), ("w", 9), ("r", 19), ("w", 29)]
-    q.append(num(MT, 3, "Capacity 10. Each request locks slot key mod 10. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 4; write 14; read 24; read 7; read 17; write 9; read 19; write 29. How many requests proceed?",
+    q.append(num(TS, 3, "A thread-safe hash index has capacity 10 and per-slot reader/writer locks. Each request locks slot key mod 10. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 4; write 14; read 24; read 7; read 17; write 9; read 19; write 29. How many requests proceed?",
                  sim.rw_proceed(10, reqs), "Proceed: read 4, read 24 (the blocked write 14 holds nothing), read 7, read 17, write 9. Blocked: write 14, read 19, write 29. Total 5."))
     r, s = [2, 2, 2, 5, 5, 7, 9], [2, 5, 5, 5, 7, 7, 8]
     q.append(num(REL, 3, "Relation R has join-key values 2, 2, 2, 5, 5, 7, 9. Relation S has join-key values 2, 5, 5, 5, 7, 7, 8. How many rows does the inner join on R.K = S.K produce?",
@@ -532,9 +588,9 @@ def exam5_numeric():
     tm, _, _, _ = sim.twoq(4, trace)
     q.append(num(BM, 3, f"Compare LRU and 2Q, each with capacity 4 and starting empty, on the trace {', '.join(map(str, trace))}. Each miss causes one disk load. {TWOQ_RULES} How many disk loads does 2Q avoid relative to LRU?",
                  lm - tm, f"LRU: {lm} loads. 2Q: {tm} loads. Pages 1 and 2 reach the LRU queue in 2Q and survive the scan of 4–8. Difference = {lm - tm}."))
-    edges = [(1, 2), (2, 3), (3, 4), (4, 1), (5, 6), (7, 8), (8, 9), (9, 7), (10, 11)]
-    q.append(num(MT, 3, "Nine transfers are ready, and each locks both accounts it touches: (1,2), (2,3), (3,4), (4,1), (5,6), (7,8), (8,9), (9,7), (10,11). What is the largest number that can run at the same time without two transfers sharing an account?",
-                 sim.max_disjoint(edges), "Cycle 1–2–3–4 allows 2 ((1,2) and (3,4)); (5,6) allows 1; triangle 7–8–9 allows 1; (10,11) allows 1. Total 5."))
+    n_read, n_write, t = 10, 4, 3
+    q.append(num(TS, 3, "A batch of 10 lookups and 4 inserts hits a hash index, and each operation holds its lock for 3 ms. Protocol A uses one global std::mutex, so all 14 operations run one at a time. Protocol B uses one global std::shared_mutex: assume all 10 lookups run together in a single shared phase, then each insert runs alone in exclusive mode. How many milliseconds does protocol B save over protocol A?",
+                 (n_read + n_write) * t - (t + n_write * t), "A: 14 × 3 = 42 ms. B: one shared phase of 3 ms plus 4 × 3 = 12 ms of exclusive inserts = 15 ms. Saved = 42 − 15 = 27."))
     pages = 1073741824 // 4096
     nbytes = pages * 2 // 8
     q.append(num(SP, 3, "A database stores 1 GiB (1,073,741,824 bytes) of 4096-byte data pages. A two-bit free-space bitmap stores 2 bits per data page, in 4096-byte pages, and tracks only data pages. How many pages does the bitmap occupy?",
@@ -567,12 +623,16 @@ ACK = {
 
 
 def build():
-    pools = [RELATIONAL, ACID, STORAGE, SLOTTED, HASHING, BUFFER, THREADS]
+    general = [THREADS[i] for i in THREADS_GENERAL_IDX]
+    m8 = [dict(THREADS[i], topic=TS) for i in THREADS_INDEX_IDX] + HASH8
+    # (pool, questions per exam): 12 from Modules 1-6, 8 from Modules 7-8
+    pools = [(RELATIONAL, 3), (ACID, 2), (STORAGE, 2), (SLOTTED, 2), (BUFFER, 2), (general, 1),
+             (HASHING, 3), (HASH7, 2), (m8, 3)]
     exams = []
     for e in range(5):
         module = []
-        for pool in pools:
-            k = len(pool) // 5
+        for pool, k in pools:
+            assert len(pool) >= 5 * k
             module.extend(pool[e * k:(e + 1) * k])
         random.Random(6422 + e).shuffle(module)
         for q in module:

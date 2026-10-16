@@ -149,6 +149,43 @@ def join_count(r, s):
     return sum(r.count(k) * s.count(k) for k in set(r))
 
 
+def linear_slots(cap, keys):
+    """Plain linear-probing inserts into an empty table. Returns {key: slot}."""
+    table, slots = [None] * cap, {}
+    for k in keys:
+        for i in range(cap):
+            s = (k + i) % cap
+            if table[s] is None:
+                table[s] = k
+                slots[k] = s
+                break
+    return slots
+
+
+def lookup_probes(cap, ops, key):
+    """Slots examined by a linear-probing lookup for `key` after ops (see linear_ops rules).
+    Stops at a never-used slot (counted) or at the key."""
+    table = [EMPTY] * cap
+    for op, k in ops:
+        for i in range(cap):
+            s = (k + i) % cap
+            if op == "ins" and table[s] in (EMPTY, TOMB):
+                table[s] = k
+                break
+            if op == "del" and table[s] == k:
+                table[s] = TOMB
+                break
+            if op == "del" and table[s] == EMPTY:
+                break
+    probes = 0
+    for i in range(cap):
+        probes += 1
+        s = (key + i) % cap
+        if table[s] == EMPTY or table[s] == key:
+            break
+    return probes
+
+
 # --- Validate against answers known from the course practice sheet -------------
 assert twoq(5, [1, 2, 1, 3, 2, 4, 5, 6, 1, 2, 7, 8, 1, 2])[1][2] == 5
 assert twoq(3, [1, 2, 1, 3, 4])[1][0] == 2

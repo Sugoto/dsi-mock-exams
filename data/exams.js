@@ -6,10 +6,10 @@ window.EXAMS = [
   "questions": [
    {
     "type": "tf",
-    "topic": "Storage & serialization",
+    "topic": "Slotted pages & file layout",
     "answer": true,
-    "text": "A length prefix before a variable-length field lets the deserializer jump to the next field without scanning for a delimiter.",
-    "why": "Read the length, skip that many bytes, and you're at the next field.",
+    "text": "After compaction moves a tuple to a new byte offset, only that tuple's slot entry must change for (page_id, slot_id) references to stay valid.",
+    "why": "That one level of indirection is the point of slots: external references name the slot, not the byte offset.",
     "points": 1,
     "n": 1
    },
@@ -24,48 +24,30 @@ window.EXAMS = [
    },
    {
     "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": false,
-    "text": "Isolation is the ACID property that guarantees committed data survives a power failure.",
-    "why": "That's durability. Isolation makes concurrent transactions behave as if they ran one at a time.",
-    "points": 1,
-    "n": 3
-   },
-   {
-    "type": "tf",
     "topic": "Storage & serialization",
     "answer": false,
     "text": "Writing the raw sizeof(std::string) bytes of a std::string object to a file persists the string's characters.",
     "why": "A std::string holds a pointer, size and capacity (characters may live on the heap). Raw bytes of the object don't portably contain the characters; serialize the length and the characters instead.",
     "points": 1,
-    "n": 4
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "As the load factor of an open-addressing table approaches 1, the expected number of probes per insert stays roughly constant.",
-    "why": "It rises sharply: with few free slots, inserts must probe much further to find one. That's why tables are resized before they fill up.",
-    "points": 1,
-    "n": 5
-   },
-   {
-    "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": true,
-    "text": "A std::unique_ptr can be moved to a new owner but not copied.",
-    "why": "unique_ptr expresses single ownership. Its copy constructor is deleted and its move constructor transfers ownership.",
-    "points": 1,
-    "n": 6
+    "n": 3
    },
    {
     "type": "tf",
     "topic": "Slotted pages & file layout",
-    "answer": true,
-    "text": "In the usual slotted-page layout, free space lies between the end of the slot directory and the start of the tuple-data region.",
-    "why": "The directory grows forward from the header and tuples grow backward from the end of the page.",
+    "answer": false,
+    "text": "In a slotted page, each slot entry stores its tuple's full payload, so the data region at the end of the page is only free space.",
+    "why": "A slot entry is metadata: it records where the tuple's bytes begin and how long they are. The payload lives in the tuple-data region.",
     "points": 1,
-    "n": 7
+    "n": 4
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "With table size 10 and quadratic probing (h + i²) mod 10, an insert can fail to find a free slot even though the table still has empty slots.",
+    "why": "i² mod 10 only takes the values {0, 1, 4, 5, 6, 9}, so some offsets are never probed.",
+    "points": 1,
+    "n": 5
    },
    {
     "type": "tf",
@@ -74,16 +56,52 @@ window.EXAMS = [
     "text": "A frame whose pin count is greater than zero must not be chosen as an eviction victim.",
     "why": "A pin means some thread is using the frame right now. Evicting it would pull the page out from under that thread.",
     "points": 1,
-    "n": 8
+    "n": 6
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "answer": true,
     "text": "With linear probing, a long run of occupied slots tends to keep growing, because any key that hashes anywhere into the run lands at its end.",
     "why": "This is primary clustering, and it lengthens probe sequences.",
     "points": 1,
+    "n": 7
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "In open addressing, a key's final slot depends only on its own hash value, not on which keys were inserted before it.",
+    "why": "Earlier keys occupy slots along the probe sequence, so the same key can land in different slots depending on insertion history.",
+    "points": 1,
+    "n": 8
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "As the load factor of an open-addressing table approaches 1, the expected number of probes per insert stays roughly constant.",
+    "why": "It rises sharply: with few free slots, inserts must probe much further to find one. That's why tables are resized before they fill up.",
+    "points": 1,
     "n": 9
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "Under a reader/writer lock, two readers of the same slot can proceed together, but a writer to that slot must wait for both.",
+    "why": "Shared (read) mode is compatible with other readers. Exclusive (write) mode is compatible with no one.",
+    "points": 1,
+    "n": 10
+   },
+   {
+    "type": "tf",
+    "topic": "Transactions & recovery",
+    "answer": true,
+    "text": "Atomicity means a transaction's writes take effect all together or not at all.",
+    "why": "A failed or aborted transaction leaves no partial effects.",
+    "points": 1,
+    "n": 11
    },
    {
     "type": "tf",
@@ -91,24 +109,6 @@ window.EXAMS = [
     "answer": false,
     "text": "Evicting a clean page requires writing it back to disk first.",
     "why": "A clean page matches its disk copy, so the frame can simply be reused.",
-    "points": 1,
-    "n": 10
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "In SQL, SELECT Location FROM Users returns each distinct location only once, even without DISTINCT.",
-    "why": "SQL uses bag (multiset) semantics by default. Relational-algebra projection removes duplicates; SQL needs SELECT DISTINCT for that.",
-    "points": 1,
-    "n": 11
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": false,
-    "text": "In a slotted page, each slot entry stores its tuple's full payload, so the data region at the end of the page is only free space.",
-    "why": "A slot entry is metadata: it records where the tuple's bytes begin and how long they are. The payload lives in the tuple-data region.",
     "points": 1,
     "n": 12
    },
@@ -133,11 +133,38 @@ window.EXAMS = [
    {
     "type": "tf",
     "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "Atomicity means a transaction's writes take effect all together or not at all.",
-    "why": "A failed or aborted transaction leaves no partial effects.",
+    "answer": false,
+    "text": "Isolation is the ACID property that guarantees committed data survives a power failure.",
+    "why": "That's durability. Isolation makes concurrent transactions behave as if they ran one at a time.",
     "points": 1,
     "n": 15
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "In a hash index with one lock per slot, an insert whose probe sequence crosses several slots may need to lock more than one slot.",
+    "why": "Probing reads neighboring slots that other threads may be changing, so they need protection too.",
+    "points": 1,
+    "n": 16
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "Under one global index mutex, two lookups for keys in different slots still execute one at a time.",
+    "why": "A single mutex serializes every operation, whatever slot it touches.",
+    "points": 1,
+    "n": 17
+   },
+   {
+    "type": "tf",
+    "topic": "Storage & serialization",
+    "answer": true,
+    "text": "A length prefix before a variable-length field lets the deserializer jump to the next field without scanning for a delimiter.",
+    "why": "Read the length, skip that many bytes, and you're at the next field.",
+    "points": 1,
+    "n": 18
    },
    {
     "type": "tf",
@@ -146,41 +173,14 @@ window.EXAMS = [
     "text": "A data race happens when two threads access the same memory location without synchronization and at least one of the accesses is a write.",
     "why": "Concurrent reads alone are fine. A race needs a shared location and at least one write.",
     "points": 1,
-    "n": 16
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "Unlike std::lock_guard, std::unique_lock can release its mutex before the end of its scope.",
-    "why": "unique_lock supports unlock() and relocking. lock_guard only releases in its destructor.",
-    "points": 1,
-    "n": 17
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "Under write-ahead logging, the log record for an update must reach durable storage before the modified data page overwrites the old version on disk.",
-    "why": "If the page reached disk first and the system crashed, recovery would have no record with which to undo or redo the change.",
-    "points": 1,
-    "n": 18
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": true,
-    "text": "After compaction moves a tuple to a new byte offset, only that tuple's slot entry must change for (page_id, slot_id) references to stay valid.",
-    "why": "That one level of indirection is the point of slots: external references name the slot, not the byte offset.",
-    "points": 1,
     "n": 19
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "answer": true,
-    "text": "With table size 10 and quadratic probing (h + i²) mod 10, an insert can fail to find a free slot even though the table still has empty slots.",
-    "why": "i² mod 10 only takes the values {0, 1, 4, 5, 6, 9}, so some offsets are never probed.",
+    "text": "Open-addressing deletes need at least three slot states (never used, occupied, deleted/tombstone) to keep lookups correct.",
+    "why": "With only empty and occupied, a delete would either break probe chains (if marked empty) or never free the slot.",
     "points": 1,
     "n": 20
    },
@@ -222,11 +222,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Storage & serialization",
+    "topic": "Thread-safe hash table (M8)",
     "points": 2,
-    "text": "A workload performs 200 page accesses. 180 are served from DRAM at 100 ns each and 20 from an SSD at 50,000 ns each. What is the average service time per access, in nanoseconds?",
-    "answer": 5090,
-    "why": "Total = 180 × 100 + 20 × 50,000 = 1,018,000 ns. 1,018,000 / 200 = 5,090 ns.",
+    "text": "A thread-safe hash index with capacity 10 uses one exclusive mutex per slot, and each insert locks only its home slot (key mod 10). Inserts for keys 12, 25, 32, 47, 55, 61 and 72 arrive at the same time. What is the largest number of these inserts whose critical sections can run at once?",
+    "answer": 4,
+    "why": "Home slots: 2, 5, 2, 7, 5, 1, 2. Inserts on the same slot wait for each other, so at most one per distinct slot runs: 4.",
     "n": 25
    },
    {
@@ -249,7 +249,7 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "points": 3,
     "text": "A ten-slot table starts empty and uses h1(k) = k mod 10, h2(k) = 1 + (k mod 7) and p_i(k) = (h1(k) + i·h2(k)) mod 10. Insert keys 5, 15, 25 and 35 in that order. What is the sum of the final slots of keys 15, 25 and 35?",
     "answer": 13,
@@ -336,48 +336,12 @@ window.EXAMS = [
   "questions": [
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": false,
-    "text": "Returning a reference to a local variable is safe as long as the caller uses it immediately.",
-    "why": "The local is destroyed when the function returns, so the reference dangles right away, however soon it is used.",
+    "topic": "Slotted pages & file layout",
+    "answer": true,
+    "text": "In the usual slotted-page layout, free space lies between the end of the slot directory and the start of the tuple-data region.",
+    "why": "The directory grows forward from the header and tuples grow backward from the end of the page.",
     "points": 1,
     "n": 1
-   },
-   {
-    "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": false,
-    "text": "static_cast from a base-class pointer to a derived-class pointer checks at runtime that the object really is of the derived type.",
-    "why": "static_cast does no runtime check. dynamic_cast does, for polymorphic types.",
-    "points": 1,
-    "n": 2
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": true,
-    "text": "Rebuilding an open-addressing table by reinserting only the live keys removes every tombstone.",
-    "why": "Tombstones aren't copied, so probe chains get shorter again.",
-    "points": 1,
-    "n": 3
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "std::scoped_lock can lock two mutexes at once using a deadlock-avoidance algorithm.",
-    "why": "It acquires all the mutexes as if with std::lock, so two threads naming the same pair in different orders won't deadlock.",
-    "points": 1,
-    "n": 4
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": false,
-    "text": "During crash recovery, a transaction that has update records but no commit record should be redone so that no work is lost.",
-    "why": "Without a commit record the transaction never committed, so recovery must undo its effects.",
-    "points": 1,
-    "n": 5
    },
    {
     "type": "tf",
@@ -385,6 +349,42 @@ window.EXAMS = [
     "answer": false,
     "text": "In 2Q, when the FIFO queue holds an unpinned page, the victim is still taken from the LRU queue first.",
     "why": "2Q evicts from FIFO first. Pages that have proven reuse in the LRU queue are protected.",
+    "points": 1,
+    "n": 2
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "If an entry also stores its key's home slot, (slot − home) mod capacity tells how many positions past home the key was placed by linear probing.",
+    "why": "That displacement is the number of extra probes a successful lookup of that key will make.",
+    "points": 1,
+    "n": 3
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": false,
+    "text": "A thread holding a shared lock on a std::shared_mutex can safely upgrade to exclusive mode by calling lock() on the same mutex.",
+    "why": "std::shared_mutex has no upgrade. Calling lock() while holding a shared lock deadlocks or is undefined; the thread must release the shared lock first.",
+    "points": 1,
+    "n": 4
+   },
+   {
+    "type": "tf",
+    "topic": "Storage & serialization",
+    "answer": true,
+    "text": "A std::unique_ptr can be moved to a new owner but not copied.",
+    "why": "unique_ptr expresses single ownership. Its copy constructor is deleted and its move constructor transfers ownership.",
+    "points": 1,
+    "n": 5
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "With double hashing p_i(k) = (h1(k) + i·h2(k)) mod m, the third probe position can only be found by first computing the first and second probes.",
+    "why": "Each position has a closed form: p_i = (h1 + i·h2) mod m, so any probe position can be computed directly.",
     "points": 1,
     "n": 6
    },
@@ -399,57 +399,21 @@ window.EXAMS = [
    },
    {
     "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "COUNT(Location) includes rows whose Location is NULL.",
-    "why": "COUNT(column) skips NULLs. COUNT(*) counts all rows.",
+    "topic": "Transactions & recovery",
+    "answer": true,
+    "text": "Under write-ahead logging, the log record for an update must reach durable storage before the modified data page overwrites the old version on disk.",
+    "why": "If the page reached disk first and the system crashed, recovery would have no record with which to undo or redo the change.",
     "points": 1,
     "n": 8
    },
    {
     "type": "tf",
-    "topic": "Transactions & recovery",
+    "topic": "Storage & serialization",
     "answer": false,
-    "text": "Durability by itself prevents two concurrent deposits from overwriting each other's update.",
-    "why": "Lost updates are an isolation failure. Both deposits can commit durably and one can still overwrite the other.",
+    "text": "Returning a reference to a local variable is safe as long as the caller uses it immediately.",
+    "why": "The local is destroyed when the function returns, so the reference dangles right away, however soon it is used.",
     "points": 1,
     "n": 9
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "A LEFT OUTER JOIN of Users with Posts can return fewer rows than Users has.",
-    "why": "Every left row appears at least once: matched rows appear once per match, and unmatched rows appear padded with NULLs.",
-    "points": 1,
-    "n": 10
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": false,
-    "text": "A new tuple always fits in a slotted page when the contiguous free space is at least the tuple's size, even if the insert also needs a new slot entry.",
-    "why": "A new slot entry also consumes free space. The insert needs room for the tuple bytes plus the slot entry.",
-    "points": 1,
-    "n": 11
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "An insert that reaches a tombstone may store the key there immediately, without checking whether the same key appears later in its probe sequence.",
-    "why": "The key might already exist further along the chain. Storing it at the tombstone would create a duplicate, so the insert must keep probing first.",
-    "points": 1,
-    "n": 12
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "WHERE filters individual rows before grouping, while HAVING filters groups after the aggregates are computed.",
-    "why": "WHERE runs before GROUP BY, and HAVING applies to the grouped results, so HAVING can reference aggregates such as COUNT(*).",
-    "points": 1,
-    "n": 13
    },
    {
     "type": "tf",
@@ -458,16 +422,7 @@ window.EXAMS = [
     "text": "A natural join of Posts(PostID, UserID, Text) and Likes(PostID, UserID) matches rows only when both PostID and UserID are equal.",
     "why": "A natural join equates every attribute name the two schemas share, here both PostID and UserID.",
     "points": 1,
-    "n": 14
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": true,
-    "text": "Before a deleted slot is reused, index entries still pointing at that (page, slot) must be removed, or lookups could return the new, unrelated tuple.",
-    "why": "Otherwise a stale index entry would silently resolve to whatever tuple now occupies the slot.",
-    "points": 1,
-    "n": 15
+    "n": 10
    },
    {
     "type": "tf",
@@ -476,41 +431,86 @@ window.EXAMS = [
     "text": "In 2Q, a long sequential scan that touches each page once mostly cycles through the FIFO queue, protecting the pages in the LRU queue.",
     "why": "Pages touched once never get promoted, so they flow through FIFO and get evicted there. This is how 2Q resists buffer-pool flooding.",
     "points": 1,
+    "n": 11
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "Rebuilding an open-addressing table by reinserting only the live keys removes every tombstone.",
+    "why": "Tombstones aren't copied, so probe chains get shorter again.",
+    "points": 1,
+    "n": 12
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": false,
+    "text": "A LEFT OUTER JOIN of Users with Posts can return fewer rows than Users has.",
+    "why": "Every left row appears at least once: matched rows appear once per match, and unmatched rows appear padded with NULLs.",
+    "points": 1,
+    "n": 13
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": false,
+    "text": "In SQL, SELECT Location FROM Users returns each distinct location only once, even without DISTINCT.",
+    "why": "SQL uses bag (multiset) semantics by default. Relational-algebra projection removes duplicates; SQL needs SELECT DISTINCT for that.",
+    "points": 1,
+    "n": 14
+   },
+   {
+    "type": "tf",
+    "topic": "Multi-threading & concurrent indexes",
+    "answer": true,
+    "text": "Unlike std::lock_guard, std::unique_lock can release its mutex before the end of its scope.",
+    "why": "unique_lock supports unlock() and relocking. lock_guard only releases in its destructor.",
+    "points": 1,
+    "n": 15
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "A std::shared_lock on a std::shared_mutex holds it in shared mode, so many lookups can hold it at the same time.",
+    "why": "Shared mode is compatible with other shared holders. Only exclusive mode excludes everyone.",
+    "points": 1,
     "n": 16
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
-    "answer": true,
-    "text": "In double hashing, if h2(k) shares a common factor with the table size, the probe sequence for k visits only some of the slots.",
-    "why": "The step cycles with period size / gcd(h2(k), size).",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "An insert that reaches a tombstone may store the key there immediately, without checking whether the same key appears later in its probe sequence.",
+    "why": "The key might already exist further along the chain. Storing it at the tombstone would create a duplicate, so the insert must keep probing first.",
     "points": 1,
     "n": 17
    },
    {
     "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": false,
-    "text": "Declaring a shared counter volatile makes counter++ safe across threads.",
-    "why": "volatile doesn't make operations atomic or synchronize threads. Use std::atomic or a mutex.",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "If two threads each hold a shared lock on the same std::shared_mutex and both then wait for the exclusive lock, they can deadlock.",
+    "why": "Each waits for the other to release its shared hold, and neither does. This is the classic upgrade deadlock.",
     "points": 1,
     "n": 18
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": true,
-    "text": "Destructors of stack objects run during stack unwinding when an exception propagates out of their scope.",
-    "why": "This is why RAII guards, such as lock and page guards, release resources even on error paths.",
+    "topic": "Slotted pages & file layout",
+    "answer": false,
+    "text": "A new tuple always fits in a slotted page when the contiguous free space is at least the tuple's size, even if the insert also needs a new slot entry.",
+    "why": "A new slot entry also consumes free space. The insert needs room for the tuple bytes plus the slot entry.",
     "points": 1,
     "n": 19
    },
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Hash tables (M7)",
     "answer": true,
-    "text": "In a file of fixed-size pages numbered from 0, a newly appended page starts at byte offset num_pages × PAGE_SIZE.",
-    "why": "Existing pages occupy bytes 0 to num_pages × PAGE_SIZE − 1, so the next page starts right after them.",
+    "text": "In double hashing, if h2(k) shares a common factor with the table size, the probe sequence for k visits only some of the slots.",
+    "why": "The step cycles with period size / gcd(h2(k), size).",
     "points": 1,
     "n": 20
    },
@@ -543,11 +543,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Slotted pages & file layout",
+    "topic": "Hash tables (M7)",
     "points": 2,
-    "text": "A file of fixed-size pages is 1,310,720 bytes long and PAGE_SIZE = 4096. Pages are numbered from 0. What is the page id of the last page?",
-    "answer": 319,
-    "why": "num_pages = 1,310,720 / 4096 = 320, so ids run 0–319.",
+    "text": "A double-hashing table has m = 11 slots, h1(k) = k mod 11, h2(k) = 1 + (k mod 7) and p_i(k) = (h1(k) + i·h2(k)) mod 11 for i = 0, 1, 2, … For key 47, which slot is probe p_3 (the fourth probe)?",
+    "answer": 10,
+    "why": "h1(47) = 3 and h2(47) = 1 + 5 = 6. p_3 = (3 + 3 × 6) mod 11 = 21 mod 11 = 10.",
     "n": 24
    },
    {
@@ -561,9 +561,9 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Multi-threading & concurrent indexes",
+    "topic": "Thread-safe hash table (M8)",
     "points": 3,
-    "text": "Capacity 8. Each request locks slot key mod 8. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 3; read 11; write 19; write 5; read 13; read 6; write 14. How many requests proceed?",
+    "text": "A thread-safe hash index has capacity 8 and per-slot reader/writer locks. Each request locks slot key mod 8. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 3; read 11; write 19; write 5; read 13; read 6; write 14. How many requests proceed?",
     "answer": 4,
     "why": "Slots: 3, 3, 3, 5, 5, 6, 6. Proceed: read 3, read 11 (shares slot 3), write 5, read 6. Blocked: write 19 (readers on slot 3), read 13 (writer on slot 5), write 14 (reader on slot 6). Total 4.",
     "n": 26
@@ -597,11 +597,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Transactions & recovery",
+    "topic": "Hash tables (M7)",
     "points": 3,
-    "text": "An account starts at 2500. Three isolated transactions run serially: T1 withdraws 12% of the current balance, T2 deposits 340, and T3 withdraws one third of the current balance. Percentages and fractions use integer division (the amount withdrawn is rounded down). What is the final balance?",
-    "answer": 1694,
-    "why": "T1: 2500 − 300 = 2200. T2: 2200 + 340 = 2540. T3: 2540 − 846 = 1694.",
+    "text": "A ten-slot table starts empty and uses h(k) = k mod 10 with linear probing. Each entry also records its key's home slot, so its displacement is (slot − home) mod 10. Insert keys 14, 24, 5, 34, 15 and 4 in that order. What is the sum of the six keys' displacements?",
+    "answer": 13,
+    "why": "Final slots: 14→4, 24→5, 5→6, 34→7, 15→8, 4→9. Displacements: 0, 1, 1, 3, 3, 5. Sum = 13.",
     "n": 30
    },
    {
@@ -667,137 +667,65 @@ window.EXAMS = [
    {
     "type": "tf",
     "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "A column that stores the string '3,7,9' as a list of tag IDs violates the atomic-value requirement of first normal form.",
-    "why": "First normal form (Codd's simple domains) requires atomic values. A packed list also can't be checked by a foreign key.",
+    "answer": false,
+    "text": "COUNT(Location) includes rows whose Location is NULL.",
+    "why": "COUNT(column) skips NULLs. COUNT(*) counts all rows.",
     "points": 1,
     "n": 1
    },
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Multi-threading & concurrent indexes",
     "answer": true,
-    "text": "An index builder that scans pages must skip empty or deleted slots; otherwise it may index tuples that no longer exist.",
-    "why": "Only active slots hold live tuples.",
+    "text": "std::scoped_lock can lock two mutexes at once using a deadlock-avoidance algorithm.",
+    "why": "It acquires all the mutexes as if with std::lock, so two threads naming the same pair in different orders won't deadlock.",
     "points": 1,
     "n": 2
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "Deleting a key by resetting its slot to never-used is safe in linear probing as long as the table is less than half full.",
-    "why": "Load factor doesn't matter. Any key that probed past that slot becomes unreachable.",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "Inserting the same two colliding keys in the opposite order into an empty linear-probing table can swap which slot each key ends up in.",
+    "why": "Whichever key arrives first takes the home slot, and the second goes to the next free slot.",
     "points": 1,
     "n": 3
    },
    {
     "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "To undo an uncommitted update after a crash, recovery needs the update's old value (its before-image) or equivalent information.",
-    "why": "Undo restores the previous state. Without before-images there's nothing to restore.",
+    "topic": "Storage & serialization",
+    "answer": false,
+    "text": "static_cast from a base-class pointer to a derived-class pointer checks at runtime that the object really is of the derived type.",
+    "why": "static_cast does no runtime check. dynamic_cast does, for polymorphic types.",
     "points": 1,
     "n": 4
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
+    "topic": "Slotted pages & file layout",
     "answer": true,
-    "text": "If tuples are deleted from a page in memory and the page is never written back, reloading that page from disk brings the deleted tuples back.",
-    "why": "Disk still holds the old page image. Changes persist only after the page is serialized and written.",
+    "text": "In a file of fixed-size pages numbered from 0, a newly appended page starts at byte offset num_pages × PAGE_SIZE.",
+    "why": "Existing pages occupy bytes 0 to num_pages × PAGE_SIZE − 1, so the next page starts right after them.",
     "points": 1,
     "n": 5
    },
    {
     "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
+    "topic": "Thread-safe hash table (M8)",
     "answer": false,
-    "text": "Adding more threads than CPU cores always speeds up a CPU-bound index build.",
-    "why": "Beyond the core count, threads compete for the same cores and context switching adds overhead.",
+    "text": "Under per-slot locking, an insert that probes slots 4, 5 and 6 can release slot 4's lock before examining slot 5 with no risk of races, because only the final slot is written.",
+    "why": "Releasing early lets another thread change the probe chain mid-insert, for example inserting the same key, so the insert can create a duplicate or miss an existing entry.",
     "points": 1,
     "n": 6
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": false,
-    "text": "Solid-state drives are volatile storage, so their contents are lost when power is removed.",
-    "why": "SSDs (NAND flash) are nonvolatile. DRAM is the volatile tier.",
+    "topic": "Buffer management",
+    "answer": true,
+    "text": "Separating policy from mechanism lets the buffer manager switch from LRU to 2Q without changing how frames are read, written or pinned.",
+    "why": "The policy only chooses the victim. The mechanism (I/O, pinning, write-back) stays the same.",
     "points": 1,
     "n": 7
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": false,
-    "text": "If pages within one file have different sizes, page k still begins at byte offset k × PAGE_SIZE.",
-    "why": "That formula only holds when every page has the same size. Variable sizes need a directory of offsets.",
-    "points": 1,
-    "n": 8
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "Rewriting a data file by writing a temporary file and then atomically renaming it over the original means readers see either the old file or the new file, never a partial one.",
-    "why": "rename within one directory is atomic, so the switch from old file to new file happens in a single step.",
-    "points": 1,
-    "n": 9
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "A transaction that is atomic and durable can still violate consistency if it leaves a foreign key pointing at a row that no longer exists.",
-    "why": "Consistency means every declared constraint holds after the transaction. Atomicity and durability don't check constraints.",
-    "points": 1,
-    "n": 10
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "A many-to-many enrollment between Students and Courses is normally stored in a separate table whose key combines StudentID and CourseID.",
-    "why": "A junction table holds one row per (student, course) pair. Neither entity table can hold the relationship in a single atomic column.",
-    "points": 1,
-    "n": 11
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "A lookup in a linear-probing table can stop at the first tombstone, because the key would have been stored there if it existed.",
-    "why": "The key may have been inserted before the deletion that created the tombstone, so it can sit further along. Only a never-used slot ends the search.",
-    "points": 1,
-    "n": 12
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": false,
-    "text": "Building a hash index over a heap file reorders the tuples on disk by key.",
-    "why": "A secondary index stores key → location entries. The heap file's physical order is unchanged.",
-    "points": 1,
-    "n": 13
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "The Cartesian product of a relation with 4 tuples and an empty relation is empty.",
-    "why": "|R × S| = |R| · |S| = 4 · 0 = 0.",
-    "points": 1,
-    "n": 14
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "Under a reader/writer lock, two readers of the same slot can proceed together, but a writer to that slot must wait for both.",
-    "why": "Shared (read) mode is compatible with other readers. Exclusive (write) mode is compatible with no one.",
-    "points": 1,
-    "n": 15
    },
    {
     "type": "tf",
@@ -806,41 +734,113 @@ window.EXAMS = [
     "text": "Holding the buffer manager's global lock while waiting for a disk read makes unrelated page requests wait behind slow I/O.",
     "why": "That's why the lab requires releasing the coarse lock before doing disk I/O.",
     "points": 1,
+    "n": 8
+   },
+   {
+    "type": "tf",
+    "topic": "Transactions & recovery",
+    "answer": false,
+    "text": "Durability by itself prevents two concurrent deposits from overwriting each other's update.",
+    "why": "Lost updates are an isolation failure. Both deposits can commit durably and one can still overwrite the other.",
+    "points": 1,
+    "n": 9
+   },
+   {
+    "type": "tf",
+    "topic": "Storage & serialization",
+    "answer": true,
+    "text": "Destructors of stack objects run during stack unwinding when an exception propagates out of their scope.",
+    "why": "This is why RAII guards, such as lock and page guards, release resources even on error paths.",
+    "points": 1,
+    "n": 10
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": true,
+    "text": "WHERE filters individual rows before grouping, while HAVING filters groups after the aggregates are computed.",
+    "why": "WHERE runs before GROUP BY, and HAVING applies to the grouped results, so HAVING can reference aggregates such as COUNT(*).",
+    "points": 1,
+    "n": 11
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "Deleting a key by resetting its slot to never-used is safe in linear probing as long as the table is less than half full.",
+    "why": "Load factor doesn't matter. Any key that probed past that slot becomes unreachable.",
+    "points": 1,
+    "n": 12
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "If h(key) = key mod 8 and every inserted key is a multiple of 8, all keys share one home slot.",
+    "why": "Every key mod 8 = 0, so a poor key distribution defeats the hash function.",
+    "points": 1,
+    "n": 13
+   },
+   {
+    "type": "tf",
+    "topic": "Transactions & recovery",
+    "answer": false,
+    "text": "During crash recovery, a transaction that has update records but no commit record should be redone so that no work is lost.",
+    "why": "Without a commit record the transaction never committed, so recovery must undo its effects.",
+    "points": 1,
+    "n": 14
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": false,
+    "text": "For a workload in which every operation is an insert, replacing a global std::mutex with a global std::shared_mutex substantially increases throughput.",
+    "why": "Inserts need exclusive mode, so they still run one at a time, and shared_mutex bookkeeping can even add overhead.",
+    "points": 1,
+    "n": 15
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "For a read-mostly workload, one table-wide std::shared_mutex can outperform one table-wide std::mutex, because lookups no longer run one at a time.",
+    "why": "Readers share the lock. With a plain mutex every lookup serializes.",
+    "points": 1,
     "n": 16
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
-    "answer": true,
-    "text": "If h(key) = key mod 8 and every inserted key is a multiple of 8, all keys share one home slot.",
-    "why": "Every key mod 8 = 0, so a poor key distribution defeats the hash function.",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "A lookup in a linear-probing table can stop at the first tombstone, because the key would have been stored there if it existed.",
+    "why": "The key may have been inserted before the deletion that created the tombstone, so it can sit further along. Only a never-used slot ends the search.",
     "points": 1,
     "n": 17
    },
    {
     "type": "tf",
     "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "The selection σ_age>30(Users) can contain more tuples than Users.",
-    "why": "Selection only keeps or drops tuples, so its result is a subset of the input.",
+    "answer": true,
+    "text": "A many-to-many enrollment between Students and Courses is normally stored in a separate table whose key combines StudentID and CourseID.",
+    "why": "A junction table holds one row per (student, course) pair. Neither entity table can hold the relationship in a single atomic column.",
     "points": 1,
     "n": 18
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
+    "topic": "Slotted pages & file layout",
     "answer": true,
-    "text": "Deleting a derived object through a base-class pointer is well-defined only if the base class has a virtual destructor.",
-    "why": "Without a virtual destructor the derived destructor isn't called, which is undefined behavior.",
+    "text": "Before a deleted slot is reused, index entries still pointing at that (page, slot) must be removed, or lookups could return the new, unrelated tuple.",
+    "why": "Otherwise a stale index entry would silently resolve to whatever tuple now occupies the slot.",
     "points": 1,
     "n": 19
    },
    {
     "type": "tf",
-    "topic": "Buffer management",
-    "answer": true,
-    "text": "Separating policy from mechanism lets the buffer manager switch from LRU to 2Q without changing how frames are read, written or pinned.",
-    "why": "The policy only chooses the victim. The mechanism (I/O, pinning, write-back) stays the same.",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "A lookup that returns std::optional<Value> still needs a sentinel value such as −1 to signal that a key is missing.",
+    "why": "std::nullopt represents absence, so no sentinel has to be reserved from the value domain.",
     "points": 1,
     "n": 20
    },
@@ -864,7 +864,7 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "points": 2,
     "text": "A 10-slot hash index uses h(key) = key mod 10 with linear probing. Lookups stop at a never-used slot and skip tombstones. An insert remembers the first tombstone, keeps probing for an existing copy of the key, and otherwise reuses that tombstone. Operations: insert 13; insert 23; insert 33; delete 23; insert 43. Which slot receives key 43?",
     "answer": 4,
@@ -873,11 +873,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Multi-threading & concurrent indexes",
+    "topic": "Thread-safe hash table (M8)",
     "points": 2,
-    "text": "A parallel index build scans 47 pages with 6 workers. Each of the first five workers receives floor(47 / 6) pages, and the last worker receives the rest. How many more pages does the last worker scan than worker 0?",
-    "answer": 5,
-    "why": "floor(47/6) = 7. The last worker gets 47 − 35 = 12. 12 − 7 = 5.",
+    "text": "A 16-slot hash index uses 4 lock stripes: key k goes to slot k mod 16, and slot s is protected by stripe s mod 4. Inserts take their stripe exclusively. In one time step, inserts for keys 3, 18, 7, 21, 34, 11 and 40 arrive in that order. An insert proceeds if its stripe is free; otherwise it blocks and holds nothing. How many inserts proceed?",
+    "answer": 4,
+    "why": "Slots: 3, 2, 7, 5, 2, 11, 8, so stripes: 3, 2, 3, 1, 2, 3, 0. Proceed: 3 (stripe 3), 18 (stripe 2), 21 (stripe 1), 40 (stripe 0). Blocked: 7, 34, 11. Total 4.",
     "n": 24
    },
    {
@@ -900,7 +900,7 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "points": 3,
     "text": "A ten-slot table starts empty and uses h(k) = k mod 10 with quadratic probing p_i = (h(k) + i²) mod 10, for i = 0, 1, 2, … Insert keys 7, 17, 27, 37 and 47 in that order. How many slot probes do the five inserts perform in total?",
     "answer": 15,
@@ -997,92 +997,38 @@ window.EXAMS = [
    {
     "type": "tf",
     "topic": "Transactions & recovery",
-    "answer": false,
-    "text": "If the disk guarantees every single page write is all-or-nothing, a transaction that updates three pages needs no log to be atomic.",
-    "why": "A crash can occur between page writes, leaving one page new and two old. Making several pages atomic together needs a log or a similar mechanism.",
+    "answer": true,
+    "text": "A transaction that is atomic and durable can still violate consistency if it leaves a foreign key pointing at a row that no longer exists.",
+    "why": "Consistency means every declared constraint holds after the transaction. Atomicity and durability don't check constraints.",
     "points": 1,
     "n": 1
    },
    {
     "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": false,
-    "text": "An aborted transaction's partial writes may remain in the database after recovery, as long as they violate no constraint.",
-    "why": "An abort must leave no trace. Remaining partial writes would break atomicity.",
+    "topic": "Storage & serialization",
+    "answer": true,
+    "text": "Deleting a derived object through a base-class pointer is well-defined only if the base class has a virtual destructor.",
+    "why": "Without a virtual destructor the derived destructor isn't called, which is undefined behavior.",
     "points": 1,
     "n": 2
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": true,
-    "text": "On a magnetic disk, reading many randomly placed pages takes longer than reading the same number of consecutive pages.",
-    "why": "Each random read pays seek time and rotational latency; sequential reads mostly avoid both.",
+    "topic": "Slotted pages & file layout",
+    "answer": false,
+    "text": "If pages within one file have different sizes, page k still begins at byte offset k × PAGE_SIZE.",
+    "why": "That formula only holds when every page has the same size. Variable sizes need a directory of offsets.",
     "points": 1,
     "n": 3
    },
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Multi-threading & concurrent indexes",
     "answer": false,
-    "text": "Marking a slot empty on delete immediately makes its bytes part of the contiguous free region, available to a large new tuple.",
-    "why": "The hole stays where it is (fragmentation) until the page is compacted.",
+    "text": "Declaring a shared counter volatile makes counter++ safe across threads.",
+    "why": "volatile doesn't make operations atomic or synchronize threads. Use std::atomic or a mutex.",
     "points": 1,
     "n": 4
-   },
-   {
-    "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": true,
-    "text": "Storing each relation in its own file lets the system drop a relation by deleting a single file.",
-    "why": "That's an advantage of file-per-relation layouts. A single large file needs internal bookkeeping instead.",
-    "points": 1,
-    "n": 5
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "In a hash index with one lock per slot, an insert whose probe sequence crosses several slots may need to lock more than one slot.",
-    "why": "Probing reads neighboring slots that other threads may be changing, so they need protection too.",
-    "points": 1,
-    "n": 6
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "A primary-key column may contain NULLs as long as all of its non-NULL values are unique.",
-    "why": "Primary-key attributes must be NOT NULL. A NULL can't identify a tuple.",
-    "points": 1,
-    "n": 7
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": true,
-    "text": "In linear probing, an unsuccessful lookup whose home slot has never been used costs exactly one probe.",
-    "why": "The first probe hits a never-used slot, which proves the key is absent.",
-    "points": 1,
-    "n": 8
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "The projection Π_UserID(Posts) always has the same number of tuples as Posts.",
-    "why": "Projection under set semantics removes duplicates. A user with several posts appears once.",
-    "points": 1,
-    "n": 9
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "Relational-algebra union requires both inputs to have the same arity and compatible attribute domains.",
-    "why": "Union, intersection and difference are defined only for union-compatible relations.",
-    "points": 1,
-    "n": 10
    },
    {
     "type": "tf",
@@ -1091,79 +1037,124 @@ window.EXAMS = [
     "text": "Copying a PageGuard is safe because each copy unfixes the page once when destroyed.",
     "why": "Two copies would unfix twice, decrementing the pin count too far. PageGuard is move-only.",
     "points": 1,
+    "n": 5
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "With 4 lock stripes and stripe = slot mod 4, operations on slots 1 and 5 contend for the same lock.",
+    "why": "1 mod 4 = 5 mod 4 = 1, so both slots share stripe 1.",
+    "points": 1,
+    "n": 6
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": true,
+    "text": "A column that stores the string '3,7,9' as a list of tag IDs violates the atomic-value requirement of first normal form.",
+    "why": "First normal form (Codd's simple domains) requires atomic values. A packed list also can't be checked by a foreign key.",
+    "points": 1,
+    "n": 7
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "Double hashing uses the same step size for every key, just like linear probing.",
+    "why": "The step is h2(k), which varies by key. That's what breaks up primary clusters.",
+    "points": 1,
+    "n": 8
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": true,
+    "text": "The Cartesian product of a relation with 4 tuples and an empty relation is empty.",
+    "why": "|R × S| = |R| · |S| = 4 · 0 = 0.",
+    "points": 1,
+    "n": 9
+   },
+   {
+    "type": "tf",
+    "topic": "Transactions & recovery",
+    "answer": false,
+    "text": "Overwriting a data file in place with a single large write() call guarantees that concurrent readers and post-crash readers never see a partially updated file.",
+    "why": "An in-place write can be observed mid-way or torn by a crash. Writing a temporary file and then atomically renaming it over the original gives readers either the old file or the new file.",
+    "points": 1,
+    "n": 10
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "h2(k) = k mod m is a safe secondary hash for double hashing.",
+    "why": "It returns 0 for every multiple of m, and a step of 0 probes the same slot forever. That's why definitions use 1 + (k mod m′).",
+    "points": 1,
     "n": 11
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "Double hashing uses the same step size for every key, just like linear probing.",
-    "why": "The step is h2(k), which varies by key. That's what breaks up primary clusters.",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "A prime table size helps double hashing, because then every step size from 1 to size − 1 visits every slot.",
+    "why": "With a prime size, gcd(step, size) = 1 for every nonzero step.",
     "points": 1,
     "n": 12
    },
    {
     "type": "tf",
     "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "With ON DELETE CASCADE on the foreign key Posts.UserID → Users.UserID, deleting a user also deletes that user's posts.",
-    "why": "CASCADE propagates the delete to the referencing rows instead of rejecting it or leaving dangling references.",
+    "answer": false,
+    "text": "The selection σ_age>30(Users) can contain more tuples than Users.",
+    "why": "Selection only keeps or drops tuples, so its result is a subset of the input.",
     "points": 1,
     "n": 13
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": false,
-    "text": "DRAM reads and SSD reads have roughly the same latency, so keeping pages in memory mainly saves CPU time.",
-    "why": "DRAM is on the order of 100 ns; SSD reads are tens of microseconds or more. Avoiding storage reads is the main win.",
+    "topic": "Slotted pages & file layout",
+    "answer": true,
+    "text": "An index builder that scans pages must skip empty or deleted slots; otherwise it may index tuples that no longer exist.",
+    "why": "Only active slots hold live tuples.",
     "points": 1,
     "n": 14
    },
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Hash tables (M7)",
     "answer": true,
-    "text": "A page of fixed-length records can track deleted slots with a free list, so inserts reuse holes before using never-used slots.",
-    "why": "Deleted slots are chained together, and inserts take the head of the chain.",
+    "text": "In linear probing, an unsuccessful lookup whose home slot has never been used costs exactly one probe.",
+    "why": "The first probe hits a never-used slot, which proves the key is absent.",
     "points": 1,
     "n": 15
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "answer": true,
-    "text": "A prime table size helps double hashing, because then every step size from 1 to size − 1 visits every slot.",
-    "why": "With a prime size, gcd(step, size) = 1 for every nonzero step.",
+    "text": "A hash index backed by a std::vector sized once at construction can't hold more entries than its capacity without being rebuilt into a larger vector.",
+    "why": "Open addressing stores entries in the array itself, so growing it means allocating a bigger array and rehashing.",
     "points": 1,
     "n": 16
    },
    {
     "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "If 50% of a job must run serially, no number of threads can make it more than 2× faster.",
-    "why": "By Amdahl's law, speedup ≤ 1 / serial fraction = 1 / 0.5 = 2.",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": false,
+    "text": "Lock striping, with one lock per group of slots, allows more parallelism than one lock per slot.",
+    "why": "Striping trades parallelism for fewer lock objects: unrelated slots in the same stripe now contend.",
     "points": 1,
     "n": 17
    },
    {
     "type": "tf",
-    "topic": "Transactions & recovery",
+    "topic": "Storage & serialization",
     "answer": true,
-    "text": "Without isolation, a transfer that has debited A but not yet credited B can be seen by another transaction that sums A + B and finds money missing.",
-    "why": "That's an inconsistent read of intermediate state, which isolation prevents.",
+    "text": "If tuples are deleted from a page in memory and the page is never written back, reloading that page from disk brings the deleted tuples back.",
+    "why": "Disk still holds the old page image. Changes persist only after the page is serialized and written.",
     "points": 1,
     "n": 18
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": false,
-    "text": "A hash index answers a range query such as key BETWEEN 10 AND 50 as efficiently as a point lookup.",
-    "why": "Hashing scatters neighboring keys across slots. Ranges need an ordered structure such as a B+-tree, or a full scan.",
-    "points": 1,
-    "n": 19
    },
    {
     "type": "tf",
@@ -1171,6 +1162,15 @@ window.EXAMS = [
     "answer": true,
     "text": "If a page is unfixed with is_dirty = true, its frame must stay marked dirty until its contents are written back.",
     "why": "Clearing the flag early would let eviction drop the modification.",
+    "points": 1,
+    "n": 19
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "If every thread acquires slot locks in increasing slot order, two threads following that rule can't form a circular wait on those locks.",
+    "why": "A global lock order removes the circular-wait condition for deadlock.",
     "points": 1,
     "n": 20
    },
@@ -1203,11 +1203,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Storage & serialization",
+    "topic": "Hash tables (M7)",
     "points": 2,
-    "text": "1000 page accesses have a 95% buffer hit rate. Hits cost 80 ns from DRAM; misses cost 20,000 ns from SSD. What is the average access time in nanoseconds?",
-    "answer": 1076,
-    "why": "950 × 80 + 50 × 20,000 = 1,076,000 ns. 1,076,000 / 1000 = 1076 ns.",
+    "text": "A ten-slot table uses h(k) = k mod 10 with linear probing. Lookups skip tombstones and stop at the key or at a never-used slot. Operations: insert 6; insert 16; insert 26; insert 36; delete 16; delete 26. A lookup for key 46 (not present) follows. How many slots does that lookup examine, counting the never-used slot that ends it?",
+    "answer": 5,
+    "why": "6, 16, 26, 36 fill slots 6–9. The deletes leave tombstones at 7 and 8. The lookup checks 6 (key 6), 7 (tombstone), 8 (tombstone), 9 (key 36), then 0 (never used): 5 slots.",
     "n": 24
    },
    {
@@ -1230,7 +1230,7 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "points": 3,
     "text": "An 11-slot table starts empty and uses h1(k) = k mod 11, h2(k) = 1 + (k mod 5) and p_i(k) = (h1(k) + i·h2(k)) mod 11. Insert keys 3, 14, 25 and 36 in that order. Which slot does key 36 end up in?",
     "answer": 5,
@@ -1248,9 +1248,9 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Multi-threading & concurrent indexes",
+    "topic": "Thread-safe hash table (M8)",
     "points": 3,
-    "text": "Capacity 10. Each request locks slot key mod 10. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 4; write 14; read 24; read 7; read 17; write 9; read 19; write 29. How many requests proceed?",
+    "text": "A thread-safe hash index has capacity 10 and per-slot reader/writer locks. Each request locks slot key mod 10. All requests arrive in this order within one logical time step, and a granted lock is held for the whole step; a blocked request holds nothing. Reads share a slot; a write conflicts with any other request on its slot. Requests: read 4; write 14; read 24; read 7; read 17; write 9; read 19; write 29. How many requests proceed?",
     "answer": 5,
     "why": "Proceed: read 4, read 24 (the blocked write 14 holds nothing), read 7, read 17, write 9. Blocked: write 14, read 19, write 29. Total 5.",
     "n": 29
@@ -1326,84 +1326,21 @@ window.EXAMS = [
   "questions": [
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Hash tables (M7)",
     "answer": true,
-    "text": "A map from page id to an in-memory page lets the storage layer serve repeated requests without re-reading the page from disk.",
-    "why": "A hit in the map avoids storage I/O. Only misses read from disk.",
+    "text": "A table with many tombstones and few live keys can still have long unsuccessful lookups.",
+    "why": "Lookups probe past tombstones and stop only at never-used slots.",
     "points": 1,
     "n": 1
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
-    "answer": true,
-    "text": "A table with many tombstones and few live keys can still have long unsuccessful lookups.",
-    "why": "Lookups probe past tombstones and stop only at never-used slots.",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "Hashing preserves key order, so reading slots 0 through n − 1 returns the keys sorted.",
+    "why": "Hash functions scatter keys. Slot order has nothing to do with key order.",
     "points": 1,
     "n": 2
-   },
-   {
-    "type": "tf",
-    "topic": "Slotted pages & file layout",
-    "answer": true,
-    "text": "When many relations share one large database file, the DBMS, not the OS file system, must track which pages belong to which relation.",
-    "why": "The OS sees one file, so page ownership is metadata the DBMS has to keep itself.",
-    "points": 1,
-    "n": 3
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": false,
-    "text": "A bug that appears only under particular thread interleavings will reproduce reliably on every run.",
-    "why": "Interleavings vary from run to run (heisenbugs). That's why race detectors and stress tests matter.",
-    "points": 1,
-    "n": 4
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": false,
-    "text": "Forcing every dirty data page to disk at commit is the only way to guarantee durability.",
-    "why": "A durable log of the changes (redo) is enough. Forcing data pages at commit is one option, not the only one.",
-    "points": 1,
-    "n": 5
-   },
-   {
-    "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "A declarative query states what result is wanted and leaves access-path choices, such as index versus full scan, to the DBMS.",
-    "why": "That separation of what from how is the data-independence benefit of declarative languages like SQL.",
-    "points": 1,
-    "n": 6
-   },
-   {
-    "type": "tf",
-    "topic": "Multi-threading & concurrent indexes",
-    "answer": true,
-    "text": "Under one global index mutex, two lookups for keys in different slots still execute one at a time.",
-    "why": "A single mutex serializes every operation, whatever slot it touches.",
-    "points": 1,
-    "n": 7
-   },
-   {
-    "type": "tf",
-    "topic": "Transactions & recovery",
-    "answer": true,
-    "text": "A committed transaction's effects must survive a crash that happens immediately after COMMIT returns to the client.",
-    "why": "Once commit is acknowledged, durability requires that the effects persist.",
-    "points": 1,
-    "n": 8
-   },
-   {
-    "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": false,
-    "text": "Two processes can safely exchange in-memory objects by writing the objects' pointer values into a shared file.",
-    "why": "Addresses are only meaningful inside the process that created them. The data itself must be serialized.",
-    "points": 1,
-    "n": 9
    },
    {
     "type": "tf",
@@ -1412,25 +1349,52 @@ window.EXAMS = [
     "text": "On the same reference trace, giving an LRU buffer more frames never increases the number of misses.",
     "why": "LRU is a stack algorithm: the contents of a smaller LRU cache are always a subset of a larger one's.",
     "points": 1,
-    "n": 10
+    "n": 3
    },
    {
     "type": "tf",
-    "topic": "Relational model & SQL",
-    "answer": false,
-    "text": "A foreign key from Posts.UserID to Users.UserID prevents two posts from having the same UserID.",
-    "why": "A foreign key only requires each value to exist in Users. Many posts can reference the same user; uniqueness would need a UNIQUE or primary-key constraint.",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": true,
+    "text": "If every request hashes to the same slot, per-slot locking behaves roughly like a single global lock.",
+    "why": "All requests contend for one lock, so finer granularity buys no parallelism.",
     "points": 1,
-    "n": 11
+    "n": 4
    },
    {
     "type": "tf",
     "topic": "Transactions & recovery",
     "answer": false,
-    "text": "Consistency is enforced by the DBMS alone, so an application invariant such as 'transfers conserve total money' can't be broken by a transaction that commits successfully.",
-    "why": "The DBMS enforces declared constraints. Application invariants depend on the transaction logic being correct, so a buggy transfer can commit and break them.",
+    "text": "If the disk guarantees every single page write is all-or-nothing, a transaction that updates three pages needs no log to be atomic.",
+    "why": "A crash can occur between page writes, leaving one page new and two old. Making several pages atomic together needs a log or a similar mechanism.",
     "points": 1,
-    "n": 12
+    "n": 5
+   },
+   {
+    "type": "tf",
+    "topic": "Relational model & SQL",
+    "answer": true,
+    "text": "With ON DELETE CASCADE on the foreign key Posts.UserID → Users.UserID, deleting a user also deletes that user's posts.",
+    "why": "CASCADE propagates the delete to the referencing rows instead of rejecting it or leaving dangling references.",
+    "points": 1,
+    "n": 6
+   },
+   {
+    "type": "tf",
+    "topic": "Thread-safe hash table (M8)",
+    "answer": false,
+    "text": "A std::shared_mutex lets a writer in exclusive mode proceed while readers still hold it in shared mode.",
+    "why": "Exclusive mode waits until every shared holder has released the mutex.",
+    "points": 1,
+    "n": 7
+   },
+   {
+    "type": "tf",
+    "topic": "Storage & serialization",
+    "answer": false,
+    "text": "Solid-state drives are volatile storage, so their contents are lost when power is removed.",
+    "why": "SSDs (NAND flash) are nonvolatile. DRAM is the volatile tier.",
+    "points": 1,
+    "n": 8
    },
    {
     "type": "tf",
@@ -1439,41 +1403,77 @@ window.EXAMS = [
     "text": "With MAX_PAGES = 1000, page_id 1000 is the last valid page.",
     "why": "Valid ids are 0 to 999, and fix_page must reject 1000 as out of range.",
     "points": 1,
-    "n": 13
+    "n": 9
    },
    {
     "type": "tf",
-    "topic": "Hash indexing",
+    "topic": "Thread-safe hash table (M8)",
     "answer": true,
-    "text": "A hash index typically maps a search key to tuple locations such as (page_id, slot_id) instead of storing whole tuples.",
-    "why": "The index stores pointers back into the data pages, so tuples aren't duplicated.",
+    "text": "A lookup that skips locking can observe a half-written entry while another thread is inserting into that slot.",
+    "why": "The key and value writes aren't atomic as a pair, so an unsynchronized reader can see the new key with the old value, a data race.",
     "points": 1,
-    "n": 14
-   },
-   {
-    "type": "tf",
-    "topic": "Hash indexing",
-    "answer": false,
-    "text": "Hashing preserves key order, so reading slots 0 through n − 1 returns the keys sorted.",
-    "why": "Hash functions scatter keys. Slot order has nothing to do with key order.",
-    "points": 1,
-    "n": 15
+    "n": 10
    },
    {
     "type": "tf",
     "topic": "Relational model & SQL",
-    "answer": true,
-    "text": "SELECT PostID, COUNT(*) FROM Likes GROUP BY PostID returns no row for a post that has zero likes.",
-    "why": "Grouping only sees PostIDs present in Likes. Reporting zero counts needs an outer join with Posts.",
+    "answer": false,
+    "text": "A primary-key column may contain NULLs as long as all of its non-NULL values are unique.",
+    "why": "Primary-key attributes must be NOT NULL. A NULL can't identify a tuple.",
     "points": 1,
-    "n": 16
+    "n": 11
    },
    {
     "type": "tf",
     "topic": "Storage & serialization",
     "answer": true,
-    "text": "A type tag stored before each serialized field lets the deserializer decide how to interpret the bytes that follow.",
-    "why": "Self-describing encodings record which type, and therefore which decoding, applies to each field.",
+    "text": "On a magnetic disk, reading many randomly placed pages takes longer than reading the same number of consecutive pages.",
+    "why": "Each random read pays seek time and rotational latency; sequential reads mostly avoid both.",
+    "points": 1,
+    "n": 12
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "Two keys with the same h1 but different h2 values follow different probe sequences after their first probe under double hashing.",
+    "why": "Both start at h1, but then step by different amounts, which is how double hashing avoids secondary clustering.",
+    "points": 1,
+    "n": 13
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": false,
+    "text": "Inserting a key that already exists in an open-addressing table should add a second entry at the first free slot of its probe sequence.",
+    "why": "The insert should find the existing entry and update it in place, otherwise lookups return a stale value and the table holds duplicates.",
+    "points": 1,
+    "n": 14
+   },
+   {
+    "type": "tf",
+    "topic": "Hash tables (M7)",
+    "answer": true,
+    "text": "A hash index typically maps a search key to tuple locations such as (page_id, slot_id) instead of storing whole tuples.",
+    "why": "The index stores pointers back into the data pages, so tuples aren't duplicated.",
+    "points": 1,
+    "n": 15
+   },
+   {
+    "type": "tf",
+    "topic": "Transactions & recovery",
+    "answer": true,
+    "text": "To undo an uncommitted update after a crash, recovery needs the update's old value (its before-image) or equivalent information.",
+    "why": "Undo restores the previous state. Without before-images there's nothing to restore.",
+    "points": 1,
+    "n": 16
+   },
+   {
+    "type": "tf",
+    "topic": "Slotted pages & file layout",
+    "answer": false,
+    "text": "A hash index answers a range query such as key BETWEEN 10 AND 50 as efficiently as a point lookup.",
+    "why": "Hashing scatters neighboring keys across slots. Ranges need an ordered structure such as a B+-tree, or a full scan.",
     "points": 1,
     "n": 17
    },
@@ -1481,26 +1481,26 @@ window.EXAMS = [
     "type": "tf",
     "topic": "Relational model & SQL",
     "answer": false,
-    "text": "If R has 6 tuples and S has 3 tuples, an equi-join of R and S on one attribute contains at most 6 tuples.",
-    "why": "With duplicate join values, each matching pair produces a row. The upper bound is 6 × 3 = 18.",
+    "text": "The projection Π_UserID(Posts) always has the same number of tuples as Posts.",
+    "why": "Projection under set semantics removes duplicates. A user with several posts appears once.",
     "points": 1,
     "n": 18
    },
    {
     "type": "tf",
-    "topic": "Storage & serialization",
-    "answer": true,
-    "text": "A positional read such as pread(fd, buf, n, offset) doesn't change a file position shared with other threads, unlike seek followed by read.",
-    "why": "The offset is an explicit argument, so concurrent readers don't race on the shared file position.",
+    "topic": "Slotted pages & file layout",
+    "answer": false,
+    "text": "Building a hash index over a heap file reorders the tuples on disk by key.",
+    "why": "A secondary index stores key → location entries. The heap file's physical order is unchanged.",
     "points": 1,
     "n": 19
    },
    {
     "type": "tf",
-    "topic": "Slotted pages & file layout",
+    "topic": "Multi-threading & concurrent indexes",
     "answer": false,
-    "text": "In a slotted page, deleting the tuple in slot 2 requires renumbering slots 3, 4 and 5 so slot ids stay contiguous.",
-    "why": "Renumbering would break every (page, slot) reference. The slot is simply marked empty.",
+    "text": "Adding more threads than CPU cores always speeds up a CPU-bound index build.",
+    "why": "Beyond the core count, threads compete for the same cores and context switching adds overhead.",
     "points": 1,
     "n": 20
    },
@@ -1533,7 +1533,7 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Hash indexing",
+    "topic": "Hash tables (M7)",
     "points": 2,
     "text": "A 7-slot hash index uses h(key) = key mod 7 with linear probing. Lookups stop at a never-used slot and skip tombstones. An insert remembers the first tombstone, keeps probing for an existing copy of the key (updating it in place if found), and otherwise reuses that tombstone. Operations: insert 10; insert 17; insert 24; delete 17; insert 24 (new value). Which slot holds the result of the final insert?",
     "answer": 5,
@@ -1560,11 +1560,11 @@ window.EXAMS = [
    },
    {
     "type": "num",
-    "topic": "Multi-threading & concurrent indexes",
+    "topic": "Thread-safe hash table (M8)",
     "points": 3,
-    "text": "Nine transfers are ready, and each locks both accounts it touches: (1,2), (2,3), (3,4), (4,1), (5,6), (7,8), (8,9), (9,7), (10,11). What is the largest number that can run at the same time without two transfers sharing an account?",
-    "answer": 5,
-    "why": "Cycle 1–2–3–4 allows 2 ((1,2) and (3,4)); (5,6) allows 1; triangle 7–8–9 allows 1; (10,11) allows 1. Total 5.",
+    "text": "A batch of 10 lookups and 4 inserts hits a hash index, and each operation holds its lock for 3 ms. Protocol A uses one global std::mutex, so all 14 operations run one at a time. Protocol B uses one global std::shared_mutex: assume all 10 lookups run together in a single shared phase, then each insert runs alone in exclusive mode. How many milliseconds does protocol B save over protocol A?",
+    "answer": 27,
+    "why": "A: 14 × 3 = 42 ms. B: one shared phase of 3 ms plus 4 × 3 = 12 ms of exclusive inserts = 15 ms. Saved = 42 − 15 = 27.",
     "n": 27
    },
    {
