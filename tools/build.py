@@ -1,4 +1,4 @@
-"""Builds data/exams.js. Numeric answer keys come from sim.py, never from hand arithmetic.
+"""Builds data/sets.js. Numeric answer keys come from sim.py, never from hand arithmetic.
 
 Run:  python3 tools/build.py
 """
@@ -310,70 +310,123 @@ THREADS_GENERAL_IDX = [0, 1, 2, 3, 5, 6, 8]
 THREADS_INDEX_IDX = [4, 7, 9]
 
 # ---------------------------------------------------------------------------
-# Paper true/false (5 per exam)
+# Paper true/false (50, grouped by paper)
 # ---------------------------------------------------------------------------
-P1, P2, P3, P4 = ("Codd 1970", "Stonebraker & Pavlo 2024", "Stonebraker 1981", "Umbra 2020")
+P1, P2, P3, P4 = ("Codd 1970", "Stonebraker 1981", "Stonebraker & Pavlo 2024", "Umbra 2020")
+PAPER_NOTES = {
+    P1: "E. F. Codd, A Relational Model of Data for Large Shared Data Banks (CACM 1970)",
+    P2: "M. Stonebraker, Operating System Support for Database Management (CACM 1981)",
+    P3: "M. Stonebraker & A. Pavlo, What Goes Around Comes Around... And Around... (SIGMOD Record 2024)",
+    P4: "T. Neumann & M. Freitag, Umbra: A Disk-Based System with In-Memory Performance (CIDR 2020)",
+}
 PAPERS = [
-    [
-        tf(P1, True, "Codd warns that programs relying on a file's stored record order can fail when that order must change, because systems of his time didn't separate presentation order from stored order.",
-           "This is the ordering dependence in §1.2.1."),
-        tf(P1, False, "Codd defines a foreign key as a domain that must reference the primary key of a different relation; a relation can't reference its own primary key.",
-           "Codd explicitly says the referenced relation S may be the same as R."),
-        tf(P2, False, "Stonebraker and Pavlo argue that key/value stores are easy to re-engineer into systems with richer data models, whereas relational DBMSs struggle to emulate key/value stores.",
-           "It's the reverse. Re-engineering a KV store for a complex data model is non-trivial, while an RDBMS emulates a KV store without changes."),
-        tf(P3, True, "Stonebraker says LRU suits random accesses with a nonzero chance of re-reference, but for cyclic sequential access it is the worst possible policy unless all the pages fit in the cache.",
-           "For cyclic patterns he recommends toss-immediately, and LRU for the random-with-reuse class."),
-        tf(P4, False, "Umbra's B+-tree leaves keep sibling pointers so that table scans can move from leaf to leaf without revisiting inner nodes.",
-           "Each page must have exactly one owning swip, so leaves have no sibling links. Scans keep an optimistic latch on the parent instead."),
-    ],
-    [
-        tf(P1, True, "Codd's normalization removes nonsimple domains by copying the parent relation's primary key into each subordinate relation, and that copied key becomes part of the subordinate relation's key.",
-           "§1.4: each expanded relation's key is its own key plus the parent key copied down."),
-        tf(P2, True, "Stonebraker and Pavlo describe vector databases as essentially document-oriented DBMSs with specialized approximate-nearest-neighbor indexes.",
-           "They call ANN indexes 'a feature, not the foundation of a new system architecture'."),
-        tf(P2, False, "Stonebraker and Pavlo predict that shared-nothing architectures will return to dominate cloud DBMS design.",
-           "They expect shared-disk designs on disaggregated storage to dominate, and don't foresee shared-nothing resurfacing."),
-        tf(P3, False, "In the intentions-list recovery scheme Stonebraker describes, the page holding the commit flag must be forced to disk before the pages of the intentions list.",
-           "It's the opposite: the commit-flag page must be forced after every intentions-list page."),
-        tf(P4, True, "Umbra's smallest page size is 64 KiB, and each larger size class doubles the page size of the previous one.",
-           "Size class i + 1 pages are twice as large as size class i pages."),
-    ],
-    [
-        tf(P1, False, "Codd argues that following every supplier → part → project link always yields exactly the set of projects each supplier supplies.",
-           "That's the 'connection trap'. Path following gives the true relation only if it happens to be the natural composition, for all time."),
-        tf(P2, True, "Stonebraker and Pavlo note that data lakes can lack statistics on newly ingested files, which makes adaptive query processing important.",
-           "Without statistics, the plan may need to adapt during execution."),
-        tf(P3, False, "Stonebraker reports that UNIX could prefetch INGRES's next block correctly, because INGRES always reads the next block in logical file order.",
-           "INGRES knows its next block, but that block often isn't the next one in file order, so the OS can't prefetch correctly."),
-        tf(P3, True, "Stonebraker describes a convoy: if the OS deschedules a DBMS process while it holds a short-term lock on a shared resource, other processes quickly queue behind that lock.",
-           "This is one of his two problems with the process-per-user model."),
-        tf(P4, False, "Umbra's optimistic latch mode increments a reader count stored inside the latch word.",
-           "Optimistic mode only remembers the version counter and doesn't modify the latch, so it causes no contention. Shared mode is the one that counts readers."),
-    ],
-    [
-        tf(P1, False, "Codd says the universality of his proposed data sublanguage lies in its computing power: it can express any computable function.",
-           "He says its universality lies in its descriptive ability, not its computing ability."),
-        tf(P1, True, "Codd notes that strongly redundant relations may be kept deliberately, for example so old programs that refer to semi-obsolete relations by name keep running.",
-           "§2.2.1 gives user convenience, including keeping old programs working, as a reason for strong redundancy."),
-        tf(P2, False, "Stonebraker and Pavlo argue that relational DBMSs can't represent graphs, so graph workloads require native graph DBMSs.",
-           "Graphs fit into Node and Edge tables, and SQL:2023 added property-graph queries (SQL/PGQ)."),
-        tf(P3, True, "Stonebraker points out that mapping a 100 MB file into paged virtual memory needs about 100 KB of page table, which may not stay resident and can cause an extra page fault.",
-           "At 4 bytes per 4 KB page, a non-resident page table can cost one fault for the table and another for the data."),
-        tf(P4, True, "When Umbra evicts a page, it writes changes back with pwrite if needed and then uses madvise(MADV_DONTNEED) so the kernel can reclaim the physical memory, while the frame's virtual address stays reserved.",
-           "That keeps physical memory use within the pool size even though far more virtual memory is reserved."),
-    ],
-    [
-        tf(P1, True, "Codd treats consistency as a property of the database's current state, regardless of how that state came about.",
-           "§2.3 makes no distinction between inconsistency caused by omission and inconsistency caused by commission."),
-        tf(P2, False, "Stonebraker and Pavlo say NewSQL vendors correctly predicted that in-memory DBMSs would be widely adopted over the following decade.",
-           "They say vendors incorrectly anticipated in-memory adoption: flash got cheaper and faster while DRAM stayed expensive."),
-        tf(P2, True, "Stonebraker and Pavlo call blockchain databases an inefficient technology looking for an application.",
-           "They note legitimate businesses won't pay a performance cost of about five orders of magnitude."),
-        tf(P3, False, "Stonebraker concludes that a single-server DBMS process avoids duplicating operating-system facilities.",
-           "A server model must do its own scheduling and multitasking, a 'painful duplication of operating system facilities'."),
-        tf(P4, False, "Umbra freely reuses the disk space of one large deleted page for several smaller pages.",
-           "Umbra reuses disk space only for pages of the same size. Otherwise ARIES could read stale bytes as a page's log sequence number after a crash."),
-    ],
+    # ---- Codd 1970 ----
+    tf(P1, False, "Codd says programs written for IDS keep working when its indexing chains are removed, because an index is a purely performance-oriented, redundant structure.",
+       "§1.2.2: IDS programs that use indexing chains must refer to them by name, so they fail when the chains are removed. TDMS (indexes on every attribute) and IMS (no index or primary-key index only) don't have this problem. Indexing is one of three dependencies Codd wants removed, with ordering and access-path dependence."),
+    tf(P1, True, "In Codd's array picture of a relation, row order is immaterial but column order is significant. For users, he proposes domain-unordered 'relationships' in which repeated domains get role names.",
+       "§1.3: column order matters because two columns can share a domain (component(part, part, quantity)). Users shouldn't have to remember the order of, say, 30 domains, so they work with relationships and role names like sub.part and super.part."),
+    tf(P1, False, "In Codd's parts-and-projects example, a program written for one of the five tree structures fails on at most one of the other four.",
+       "§1.2.3: it fails on at least three of the remaining structures. If it works on structure 5, it fails on all the others. This is access-path dependence, and keeping every old path forever isn't practical."),
+    tf(P1, True, "In Codd's supply(supplier, part, project, quantity) relation, the combination of supplier, part and project is the primary key, and each of those three domains on its own is a foreign key.",
+       "§1.3. A foreign key isn't the primary key of R, but its values are primary-key values of some relation S, and S may be R itself. A primary key is nonredundant if no participating domain is superfluous."),
+    tf(P1, False, "Codd's normalization procedure applies to any unnormalized collection, including one where a primary key has a nonsimple component domain.",
+       "§1.4 has two preconditions: the nonsimple domains must form a collection of trees, and no primary key may have a nonsimple component. Normalization copies the parent's key into each child, adds it to the child's key, and strikes out the nonsimple domains."),
+    tf(P1, True, "Codd says a first-order predicate calculus is enough for his universal data sublanguage, provided the collection of relations is in normal form.",
+       "§1.5. The sublanguage's universality lies in its descriptive ability, not its computing ability. Arithmetic functions are defined in the host language and invoked from the sublanguage."),
+    tf(P1, False, "Codd says that symmetric exploitation of an n-ary relation in a path-based system needs 2n − 1 named paths.",
+       "§1.5: it needs n! paths (2 for a binary relation). The 2n − 1 figure is something else: the number of names needed when an n-ary relation is written as nested binary relations, compared with n + 1 in n-ary notation (7 vs 5 for supply)."),
+    tf(P1, True, "Codd describes the named set of relations as a subset of the expressible set, and usually a very small one.",
+       "§1.6. The named set holds relations users can refer to by a simple name. The expressible set holds every relation the data language can describe from those names, connectives and quantifiers."),
+    tf(P1, True, "Codd says that if S is a function, there's no point of ambiguity, so the natural join of R with S is the only join of R with S.",
+       "§2.1.3: a point of ambiguity is a joining-domain value with more than one relative under both R and S. It causes multiple joins. Joinability is not symmetric: joining R with S is a separate question from joining S with R."),
+    tf(P1, False, "Codd shows that when R and S have several distinct joins, they always have exactly as many distinct compositions.",
+       "§2.1.4: the number of compositions can be as few as one or as many as the number of joins (Fig. 12 has many joins and one composition). Confusing compositions with path-following leads to the 'connection trap'."),
+    tf(P1, False, "Codd's adequate set of operations for derivability in the named set includes permutation and natural composition.",
+       "§2.2: the set is projection, natural join, tie and restriction. Permutation is irrelevant to domain-unordered relationships, and natural composition is just a natural join followed by a projection. Plain 'join' isn't eligible because its result isn't unique."),
+    tf(P1, True, "Codd says weak redundancies can't be removed by the database administrator and, if present, appear in both the named set and the stored set.",
+       "§2.2.2: weak redundancy is inherent in users' logical needs (e.g. P is always some composition of Q and R, not necessarily the natural one). Strong redundancy can be expressed as an equation, and may be kept on purpose so old programs keep running."),
+    tf(P1, False, "Codd recommends checking consistency on every insertion, deletion and key update rather than in a daily batch, because batch checking can't trace which input caused an inconsistency.",
+       "§2.3: with a journal of state-changing transactions, batch checking can track down the inputs, and it's superior if few lasting inconsistencies occur. Per-operation checking slows those operations down. Consistency is a property of the current state, whether it came from omission or commission."),
+
+    # ---- Stonebraker 1981 ----
+    tf(P2, False, "Stonebraker reports that on a PDP-11/70, fetching 1 byte from the UNIX buffer pool costs about the same as fetching 512 bytes: over 5,000 instructions.",
+       "§2.1: 512 bytes costs over 5,000 instructions and 1 byte about 1,800 (system call plus core-to-core copy). He says an OS buffer manager would need a few hundred instructions to be attractive, so INGRES and System R keep their own pool in user space."),
+    tf(P2, True, "For random accesses to blocks that won't be referenced again, Stonebraker recommends toss-immediately rather than LRU.",
+       "§2.2 lists four access patterns. LRU suits only random access with a nonzero chance of re-reference. One-time sequential and random access should toss immediately. For cyclic sequential access LRU is the worst possible policy, unless all n pages fit."),
+    tf(P2, False, "The study Stonebraker cites found that a DBMS-specific replacement policy cut the buffer miss ratio by about half compared with LRU.",
+       "Kaplan's INGRES traces showed a 10–15% cut. Stonebraker adds that an OS buffer manager would need a way to accept replacement 'advice' from the DBMS."),
+    tf(P2, True, "In the intentions-list scheme Stonebraker describes, the transaction isn't reliably committed, and the user can't be told it succeeded, until the commit flag reaches disk.",
+       "§2.4. The commit-flag page must be forced after all intentions-list pages, which requires a 'selected force out' that no OS buffer manager he knew of provided. Processing the list is made idempotent so recovery can redo it."),
+    tf(P2, True, "Stonebraker says a DBMS prefers an extent-based file system, because files grown a block at a time scatter their blocks and sequential scans then cause heavy disk-arm movement.",
+       "§3.1. Extent-based files grow an extent at a time and can be read as a contiguous collection. Stonebraker also says OS designers should provide record management as the lower-level object and character arrays on top of it."),
+    tf(P2, False, "Stonebraker counts two separately managed tree structures when INGRES runs on UNIX: the i-node's indirect-block tree and INGRES's own keyed-access tree.",
+       "§3.2 counts three: the file's block tree (i-node), the directory hierarchy, and the DBMS's ISAM or B-tree index. He argues one combined tree would be more efficient."),
+    tf(P2, True, "Because UNIX had no shared data segments, INGRES had to put its lock table inside the operating system and give each user private buffering.",
+       "§4. In a process-per-user design the buffer pool and lock table should ideally be shared segments, as in System R. The alternative is a single server process, as in Tandem's Enscribe."),
+    tf(P2, False, "Stonebraker argues that a first-come-first-served server with no internal parallelism works well on a machine with many disks, since each request can keep all the disks busy.",
+       "§4.3: each request tends to have one disk read outstanding, so at most one disk is active, and long requests delay short ones. A server must otherwise do its own scheduling and multitasking, a painful duplication of OS facilities."),
+    tf(P2, True, "Stonebraker warns that replacing a task switch per I/O with a message per I/O may not help, because a round-trip message on PDP-11/70 UNIX costs about 5,000 instructions.",
+       "§4.4. A task switch costs from a few hundred instructions to a thousand or more on OSes with 'large' processes. Neither the process-per-user model nor the server model escapes the overhead."),
+    tf(P2, False, "In Stonebraker's example of a 20% pay cut for everyone who earns more than their manager, updating rows in place as they're found is safe because Brown is the only employee who ever qualifies.",
+       "§5.2: Smith earns 10,000 under Brown at 11,000. If Brown's pay is cut to 8,800 before Smith is examined, Smith now qualifies too. The outcome depends on execution order unless an intentions list defers the updates."),
+    tf(P2, True, "To solve the convoy problem, Stonebraker suggests a special scheduling class in which DBMS processes are never forcibly descheduled but give up the CPU voluntarily.",
+       "§4.5. A convoy forms when a process is descheduled while holding a short-term lock on the shared buffer pool. In his conclusion, he says real-time OSs with minimal, efficient services come closest to what a DBMS wants."),
+    tf(P2, False, "Stonebraker says a page table describes a file of 1,000 consecutive blocks as compactly as an extent-based file control block does.",
+       "§6.1: a file control block stores a starting block and a length, but a page table stores all 1,000 addresses. At 4 bytes per 4 KB page, a 100 MB file needs about 100 KB of page table, which may not stay resident and can cause a second page fault."),
+
+    # ---- Stonebraker & Pavlo 2024 ----
+    tf(P3, False, "Stonebraker and Pavlo say Google moved its crawl processing off MapReduce because MapReduce couldn't scale to the size of the crawl.",
+       "§2.1: Google needed to update the crawl database interactively in real time, and MapReduce was a batch system, so the crawl moved to BigTable. MR was retired in 2014. Hadoop vendors then built SQL engines (Impala, Drill, Presto) directly on HDFS."),
+    tf(P3, False, "Stonebraker and Pavlo describe column-family systems such as BigTable, Cassandra and HBase as using a columnar data model.",
+       "§2.4: despite the name, column-family is a reduction of the document model with one level of nesting. Columnar storage (§3.1) is a physical layout for OLAP. Column-family systems also copied BigTable's lack of joins and secondary indexes."),
+    tf(P3, True, "Stonebraker and Pavlo note that the problems with denormalizing data into nested documents date to the 1970s: data is duplicated when the relationship isn't one-to-many, prejoins aren't necessarily faster, and data independence is lost.",
+       "§2.3. They see document DBMSs as repeating the object-oriented and XML DBMS arguments about removing impedance mismatch."),
+    tf(P3, False, "Stonebraker and Pavlo say MongoDB was the first major NoSQL DBMS to add a SQL interface.",
+       "§2.3: MongoDB was the last holdout, adding SQL for Atlas in 2021, after DynamoDB (PartiQL), Cassandra (CQL), Aerospike and Couchbase. 'NoSQL' shifted from 'don't use SQL' to 'Not only SQL'."),
+    tf(P3, False, "Stonebraker and Pavlo report that, as with JSON support, major RDBMSs took several years to add vector indexes after LLMs went mainstream.",
+       "§2.7: it took less than a year after ChatGPT (late 2022), partly because adding an index is little engineering and vendors integrated libraries like FAISS or DiskANN. JSON support took years. Vector DBMSs are document DBMSs with ANN indexes, and an index is a feature, not a new architecture."),
+    tf(P3, True, "Stonebraker and Pavlo expect OLTP graph workloads to be served mostly by RDBMSs, and graph analytics to work best in main memory on a single node with compact, specialized data structures.",
+       "§2.8–2.9. Distributed graph algorithms rarely beat single-node implementations because of communication costs. SQL:2023 added SQL/PGQ, and DuckDB's SQL/PGQ beat a leading graph DBMS by up to 10×."),
+    tf(P3, True, "Stonebraker and Pavlo expect scientific applications to keep using bespoke array systems, even though SQL:2023 added multi-dimensional arrays (SQL/MDA).",
+       "§2.9: array DBMSs remain a niche, and RDBMSs can't store and analyze arrays efficiently despite SQL/MDA. No major cloud provider offers a hosted array DBMS."),
+    tf(P3, True, "Stonebraker and Pavlo give three advantages of column stores: better compression, inner loops that process a whole column with vectorized instructions, and very little per-record storage overhead.",
+       "§3.1. A Volcano-style engine runs each operator once per row, and row stores carry about 20 bytes of header per record. Every data-warehouse vendor has moved from row stores to column stores."),
+    tf(P3, False, "Stonebraker and Pavlo credit Amazon Redshift with introducing serverless computing for cloud-native DBMSs.",
+       "§3.2: Snowflake introduced it. Disaggregated storage gives per-query elasticity and lets compute be reassigned, and they expect shared-disk designs to dominate rather than shared-nothing."),
+    tf(P3, True, "Stonebraker and Pavlo say custom hardware accelerators for DBMSs are likely to succeed only at large cloud vendors, who can justify $50–100M of R&D and control the whole hardware and software stack.",
+       "§3.5. GPU DBMSs outnumber FPGA ones because of libraries like CUDA, but a GPU stalls once data doesn't fit in its memory. Redshift AQUA is an example of cloud-vendor hardware."),
+    tf(P3, False, "Stonebraker and Pavlo attribute NewSQL's weak adoption mainly to NoSQL systems already providing strong ACID transactions.",
+       "§3.4: existing DBMSs were good enough, and companies are risk-averse about migrating OLTP systems. NewSQL vendors also bet wrongly on in-memory systems, since SSDs got cheaper while DRAM stayed expensive. NoSQL vendors later added transactions themselves."),
+    tf(P3, True, "Stonebraker and Pavlo note that MySQL was the first DBMS to expose an API for replacing its storage manager, which let Meta replace InnoDB with RocksDB across its MySQL fleet.",
+       "§2.2: using embedded key/value stores as storage managers is a 20-year trend. MongoDB similarly switched to WiredTiger in 2014. They add that an RDBMS emulates a KV store easily, but the reverse is hard."),
+    tf(P3, False, "Stonebraker and Pavlo expect LLM-based natural-language interfaces to replace SQL for writing OLTP applications.",
+       "§4: OLTP code generates queries through ORMs, so nobody will write it in natural language. NL may help draft exploratory OLAP queries, which should then be refined in a dashboard because natural language is ambiguous."),
+
+    # ---- Umbra 2020 ----
+    tf(P4, False, "Like the ADABAS buffer manager, Umbra requires the amount of buffer-pool memory to be configured separately for each page size class.",
+       "§2/§5: Umbra uses one pool into which any size class loads, by default half of physical memory. ADABAS supported only two page sizes in separate pools sized in advance."),
+    tf(P4, True, "For each size class, Umbra reserves a virtual-memory region as large as the whole buffer pool, so the virtual address space of a size class never fragments, although the physical memory behind it can.",
+       "§2.1: frames hold fixed virtual addresses in a private anonymous mmap. pread fills a frame, and on eviction pwrite plus madvise(MADV_DONTNEED) releases the physical memory. Pages start at 64 KiB and double with each size class."),
+    tf(P4, False, "A swizzled swip in Umbra stores a 57-bit memory pointer together with the page's 6-bit size class.",
+       "§2.2: a swizzled swip is just the pointer, whose low bit is 0 because of 8-byte alignment. An unswizzled swip has its tag bit set to 1 and stores a 57-bit page number plus a 6-bit size class, enough to load the page."),
+    tf(P4, True, "Umbra requires every buffer-managed data structure to organize its pages as a (possibly degenerate) tree, so each page is referenced by exactly one owning swip.",
+       "§2.2: otherwise every swip pointing to a page would have to be found and updated on eviction. So B+-tree leaves have no sibling pointers, and scans keep an optimistic latch on the parent to reach the next leaf."),
+    tf(P4, False, "If the state bits of an Umbra versioned latch hold the value 3, three threads currently hold the latch in shared mode.",
+       "§2.3: 0 means unlocked, 1 exclusive, and n + 1 means n shared holders, so 3 means two. The latch is a 64-bit word with 5 state bits and a 59-bit version counter. Optimistic readers don't touch the latch at all; they record the version and validate it afterwards, and a page may even be evicted mid-read (the reserved virtual range then reads as zeros)."),
+    tf(P4, False, "Like LeanStore, Umbra supports only optimistic latching for readers.",
+       "§2.3: Umbra adds a shared mode. Its operators don't know relations are paged, so without shared latches every operator would need validation logic, and read-heavy OLAP queries would keep failing validation when other queries write."),
+    tf(P4, True, "Umbra's B+-tree inner nodes always use the smallest page size, 64 KiB, giving a fanout of 8,192.",
+       "§2.4. Leaves are usually 64 KiB as well, but a leaf can use a larger size class when a single tuple doesn't fit."),
+    tf(P4, False, "When an Umbra leaf page overflows, the leaf is split around its median tuple identifier, as in a standard B+-tree.",
+       "§2.4: tuple identifiers are synthetic 8-byte keys that increase strictly monotonically, so Umbra fills nodes completely and never splits leaves. A new leaf is allocated only when a tuple doesn't fit, and leaves use a PAX layout."),
+    tf(P4, True, "In Umbra, a string of exactly 12 characters is stored entirely inside its 16-byte header.",
+       "§3.1: 4 bytes of length plus up to 12 inline characters. Longer strings keep a 4-character prefix and an 8-byte offset or pointer. Strings never need to be split across pages, because pages can be larger."),
+    tf(P4, False, "A string read from a relation has persistent storage duration in Umbra, because it lives in the database.",
+       "§3.1: strings from relations are transient, since their page may be evicted, so they must be copied if materialized. Query constants are persistent, and strings created during the query (e.g. by UPPER) are temporary and garbage-collected."),
+    tf(P4, True, "Umbra first runs each step's IR as interpreted bytecode, and compiles it with LLVM only when its adaptive execution judges that worthwhile.",
+       "§3.3: Umbra generates its own lightweight IR rather than LLVM IR, and plans are modular state machines of steps processed in morsels. Adaptive compilation is largely why Umbra beats HyPer (3.0× on JOB, 1.8× on TPC-H), while raw execution times are comparable."),
+    tf(P4, True, "When Umbra bypassed its buffer manager entirely and read relations from flat memory-mapped files, query execution time changed by less than 6% on average.",
+       "§4.2: it changed by under 2% when only string materialization was avoided. Cold-cache scans reached 1.13 GiB/s with the buffer manager and 1.15 GiB/s without it, so storage bandwidth is the bottleneck."),
 ]
 
 # ---------------------------------------------------------------------------
@@ -612,62 +665,82 @@ def exam5_numeric():
 
 NUMERIC = [exam1_numeric(), exam2_numeric(), exam3_numeric(), exam4_numeric(), exam5_numeric()]
 
-ACK = {
-    "type": "ack",
-    "topic": "Acknowledgement",
-    "points": 0,
-    "text": "You've reached the final zero-point acknowledgement question. Before submitting, show both sides of your scratch paper to the camera. Have you shown both sides of your scratch paper to the camera?",
-    "answer": "Yes",
-    "why": "On the real exam, answer Yes after showing the camera both sides of your scratch paper.",
-}
+
+def module_tf():
+    """The 20 module T/F questions from each of the five original exams, in exam order."""
+    general = [THREADS[i] for i in THREADS_GENERAL_IDX]
+    m8 = [dict(THREADS[i], topic=TS) for i in THREADS_INDEX_IDX] + HASH8
+    # (pool, questions per original exam): 12 from Modules 1-6, 8 from Modules 7-8
+    pools = [(RELATIONAL, 3), (ACID, 2), (STORAGE, 2), (SLOTTED, 2), (BUFFER, 2), (general, 1),
+             (HASHING, 3), (HASH7, 2), (m8, 3)]
+    out = []
+    for e in range(5):
+        block = []
+        for pool, k in pools:
+            assert len(pool) >= 5 * k
+            block.extend(pool[e * k:(e + 1) * k])
+        random.Random(6422 + e).shuffle(block)
+        out.extend(block)
+    return out
+
+
+TOPIC_ORDER = [REL, TX, ST, SP, HX, TS, BM, MT]
+
+
+def make_set(sid, title, parts):
+    questions = []
+    out_parts = []
+    for name, note, qs in parts:
+        start = len(questions) + 1
+        for q in qs:
+            q = {k: v for k, v in q.items() if k != "points"}
+            q["n"] = len(questions) + 1
+            questions.append(q)
+        out_parts.append({"name": name, "note": note, "from": start, "to": len(questions)})
+    return {"id": sid, "title": title, "parts": out_parts, "questions": questions}
 
 
 def build():
-    general = [THREADS[i] for i in THREADS_GENERAL_IDX]
-    m8 = [dict(THREADS[i], topic=TS) for i in THREADS_INDEX_IDX] + HASH8
-    # (pool, questions per exam): 12 from Modules 1-6, 8 from Modules 7-8
-    pools = [(RELATIONAL, 3), (ACID, 2), (STORAGE, 2), (SLOTTED, 2), (BUFFER, 2), (general, 1),
-             (HASHING, 3), (HASH7, 2), (m8, 3)]
-    exams = []
-    for e in range(5):
-        module = []
-        for pool, k in pools:
-            assert len(pool) >= 5 * k
-            module.extend(pool[e * k:(e + 1) * k])
-        random.Random(6422 + e).shuffle(module)
-        for q in module:
-            q["points"] = 1
-        papers = [dict(q, points=1) for q in PAPERS[e]]
-        questions = module + NUMERIC[e] + papers + [ACK]
-        for i, q in enumerate(questions, 1):
-            q["n"] = i
-        exams.append({"id": e + 1, "title": f"Mock Exam {e + 1}", "questions": questions})
-    return exams
+    modules = module_tf()
+    numeric = [q for exam in NUMERIC for q in exam]
+    numeric.sort(key=lambda q: TOPIC_ORDER.index(q["topic"]))  # stable: keeps exam order within a topic
+    num_parts = [(t, "Enter an exact whole number.", [q for q in numeric if q["topic"] == t])
+                 for t in TOPIC_ORDER if any(q["topic"] == t for q in numeric)]
+    paper_parts = [(p, PAPER_NOTES[p], [q for q in PAPERS if q["topic"] == p]) for p in (P1, P2, P3, P4)]
+    return [
+        make_set("modules", "Modules · True/False",
+                 [("Modules 1–8 · True/False", "100 questions, mixed topics", modules)]),
+        make_set("numeric", "Numeric", num_parts),
+        make_set("papers", "Papers · True/False", paper_parts),
+    ]
 
 
-def check(exams):
+def check(sets):
     seen = set()
-    for ex in exams:
-        qs = ex["questions"]
-        tfs = [q for q in qs if q["type"] == "tf"]
-        nums = [q for q in qs if q["type"] == "num"]
-        assert len(qs) == 36 and len(tfs) == 25 and len(nums) == 10
-        assert sum(q["topic"] in (P1, P2, P3, P4) for q in tfs) == 5
-        assert sum(q["points"] for q in qs) == 50, ex["title"]
-        assert [q["points"] for q in nums] == [2] * 5 + [3] * 5
-        trues = sum(q["answer"] for q in tfs)
-        assert 10 <= trues <= 15, (ex["title"], trues)
-        for q in qs:
-            if q["type"] != "ack":
-                assert q["text"] not in seen, q["text"]
-                seen.add(q["text"])
-        print(f"{ex['title']}: 35 graded + ack, 50 pts, T/F true={trues}/25")
+    modules, numeric, papers = sets
+    assert len(modules["questions"]) == 100 and all(q["type"] == "tf" for q in modules["questions"])
+    assert len(numeric["questions"]) == 50 and all(q["type"] == "num" for q in numeric["questions"])
+    assert len(papers["questions"]) == 50 and all(q["type"] == "tf" for q in papers["questions"])
+    for s in sets:
+        for q in s["questions"]:
+            assert q["text"] not in seen, q["text"]
+            seen.add(q["text"])
+        tfs = [q for q in s["questions"] if q["type"] == "tf"]
+        if tfs:
+            print(f"{s['title']}: {len(s['questions'])} questions, True={sum(q['answer'] for q in tfs)}")
+        else:
+            print(f"{s['title']}: {len(s['questions'])} questions")
+    for p in (P1, P2, P3, P4):
+        qs = [q for q in papers["questions"] if q["topic"] == p]
+        trues = sum(q["answer"] for q in qs)
+        assert 5 <= trues <= len(qs) - 5, (p, trues, len(qs))
+        print(f"  {p}: {len(qs)} questions, True={trues}")
 
 
 if __name__ == "__main__":
-    exams = build()
-    check(exams)
-    out = ROOT / "data" / "exams.js"
-    out.write_text("// Generated by tools/build.py. Do not edit by hand.\nwindow.EXAMS = "
-                   + json.dumps(exams, ensure_ascii=False, indent=1) + ";\n")
+    sets = build()
+    check(sets)
+    out = ROOT / "data" / "sets.js"
+    out.write_text("// Generated by tools/build.py. Do not edit by hand.\nwindow.SETS = "
+                   + json.dumps(sets, ensure_ascii=False, indent=1) + ";\n")
     print("wrote", out.relative_to(ROOT))

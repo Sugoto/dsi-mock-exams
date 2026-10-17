@@ -1,13 +1,12 @@
-# DSI mock exams
+# DSI practice questions
 
-Five practice exams for CS 6422 (Database System Implementation), in the final-exam format:
+Practice questions for CS 6422 (Database System Implementation), split into three sets:
 
-- 35 graded questions worth 50 points, followed by a zero-point Yes/No scratch-paper acknowledgement
-- Questions 1–20: True/False on Modules 1–8 (1 point each)
-- Questions 21–30: numeric answers (21–25 are 2 points, 26–30 are 3 points)
-- Questions 31–35: True/False on Papers 1–4 (1 point each)
+- **Modules · True/False** (100): Modules 1–8, mixed topics
+- **Numeric** (50): exact whole-number answers, grouped by topic
+- **Papers · True/False** (50): Codd 1970, Stonebraker 1981, Stonebraker & Pavlo 2024 and Umbra 2020, grouped by paper
 
-Open `index.html` locally or use the GitHub Pages site. Every answer is graded immediately; finishing shows the total score out of 50 and missed topics. Progress is saved in your browser's localStorage.
+Open `index.html` locally or use the GitHub Pages site. Each answer is graded as soon as you give it, with an explanation. Answers are saved in your browser's localStorage.
 
 ## Regenerating the questions
 
@@ -17,6 +16,6 @@ Questions live in `tools/build.py`. The numeric answer keys are computed by the 
 python3 tools/build.py
 ```
 
-This rewrites `data/exams.js` and checks each exam's question counts, point total, True/False balance, and that no question text repeats.
+This rewrites `data/sets.js` and checks set sizes, True/False balance, and that no question text repeats.
 
 These are original practice questions, not official course material.
