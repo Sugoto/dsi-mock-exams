@@ -1278,18 +1278,18 @@ window.SETS = [
     "name": "Codd 1970",
     "note": "E. F. Codd, A Relational Model of Data for Large Shared Data Banks (CACM 1970)",
     "from": 1,
-    "to": 13
+    "to": 12
    },
    {
     "name": "Stonebraker 1981",
     "note": "M. Stonebraker, Operating System Support for Database Management (CACM 1981)",
-    "from": 14,
-    "to": 25
+    "from": 13,
+    "to": 24
    },
    {
     "name": "Stonebraker & Pavlo 2024",
     "note": "M. Stonebraker & A. Pavlo, What Goes Around Comes Around... And Around... (SIGMOD Record 2024)",
-    "from": 26,
+    "from": 25,
     "to": 38
    },
    {
@@ -1369,16 +1369,8 @@ window.SETS = [
     "topic": "Codd 1970",
     "answer": true,
     "text": "Codd says that if S is a function, there's no point of ambiguity, so the natural join of R with S is the only join of R with S.",
-    "why": "§2.1.3: a point of ambiguity is a joining-domain value with more than one relative under both R and S. It causes multiple joins. Joinability is not symmetric: joining R with S is a separate question from joining S with R.",
+    "why": "§2.1.3: a point of ambiguity is a joining-domain value with more than one relative under both R and S. It causes multiple joins. Joinability is not symmetric. Several joins can still yield as few as one composition (Fig. 12). Treating path-following as composition is the 'connection trap'.",
     "n": 9
-   },
-   {
-    "type": "tf",
-    "topic": "Codd 1970",
-    "answer": false,
-    "text": "Codd shows that when R and S have several distinct joins, they always have exactly as many distinct compositions.",
-    "why": "§2.1.4: the number of compositions can be as few as one or as many as the number of joins (Fig. 12 has many joins and one composition). Confusing compositions with path-following leads to the 'connection trap'.",
-    "n": 10
    },
    {
     "type": "tf",
@@ -1386,7 +1378,7 @@ window.SETS = [
     "answer": false,
     "text": "Codd's adequate set of operations for derivability in the named set includes permutation and natural composition.",
     "why": "§2.2: the set is projection, natural join, tie and restriction. Permutation is irrelevant to domain-unordered relationships, and natural composition is just a natural join followed by a projection. Plain 'join' isn't eligible because its result isn't unique.",
-    "n": 11
+    "n": 10
    },
    {
     "type": "tf",
@@ -1394,7 +1386,7 @@ window.SETS = [
     "answer": true,
     "text": "Codd says weak redundancies can't be removed by the database administrator and, if present, appear in both the named set and the stored set.",
     "why": "§2.2.2: weak redundancy is inherent in users' logical needs (e.g. P is always some composition of Q and R, not necessarily the natural one). Strong redundancy can be expressed as an equation, and may be kept on purpose so old programs keep running.",
-    "n": 12
+    "n": 11
    },
    {
     "type": "tf",
@@ -1402,7 +1394,7 @@ window.SETS = [
     "answer": false,
     "text": "Codd recommends checking consistency on every insertion, deletion and key update rather than in a daily batch, because batch checking can't trace which input caused an inconsistency.",
     "why": "§2.3: with a journal of state-changing transactions, batch checking can track down the inputs, and it's superior if few lasting inconsistencies occur. Per-operation checking slows those operations down. Consistency is a property of the current state, whether it came from omission or commission.",
-    "n": 13
+    "n": 12
    },
    {
     "type": "tf",
@@ -1410,23 +1402,23 @@ window.SETS = [
     "answer": false,
     "text": "Stonebraker reports that on a PDP-11/70, fetching 1 byte from the UNIX buffer pool costs about the same as fetching 512 bytes: over 5,000 instructions.",
     "why": "§2.1: 512 bytes costs over 5,000 instructions and 1 byte about 1,800 (system call plus core-to-core copy). He says an OS buffer manager would need a few hundred instructions to be attractive, so INGRES and System R keep their own pool in user space.",
-    "n": 14
+    "n": 13
    },
    {
     "type": "tf",
     "topic": "Stonebraker 1981",
     "answer": true,
     "text": "For random accesses to blocks that won't be referenced again, Stonebraker recommends toss-immediately rather than LRU.",
-    "why": "§2.2 lists four access patterns. LRU suits only random access with a nonzero chance of re-reference. One-time sequential and random access should toss immediately. For cyclic sequential access LRU is the worst possible policy, unless all n pages fit.",
-    "n": 15
+    "why": "§2.2 lists four access patterns. LRU suits only random access with a nonzero chance of re-reference. One-time sequential and random access should toss immediately. For cyclic sequential access LRU is the worst possible policy, unless all n pages fit. Kaplan's INGRES traces showed a DBMS-specific policy cuts misses 10–15%.",
+    "n": 14
    },
    {
     "type": "tf",
     "topic": "Stonebraker 1981",
     "answer": false,
-    "text": "The study Stonebraker cites found that a DBMS-specific replacement policy cut the buffer miss ratio by about half compared with LRU.",
-    "why": "Kaplan's INGRES traces showed a 10–15% cut. Stonebraker adds that an OS buffer manager would need a way to accept replacement 'advice' from the DBMS.",
-    "n": 16
+    "text": "Stonebraker says UNIX can't prefetch for INGRES because UNIX never detects sequential access, so it has no basis for reading ahead.",
+    "why": "§2.3: UNIX does detect sequential access and prefetches correctly then. It fails because INGRES usually knows exactly which block it needs next, and that block often isn't the next one in logical file order.",
+    "n": 15
    },
    {
     "type": "tf",
@@ -1434,6 +1426,14 @@ window.SETS = [
     "answer": true,
     "text": "In the intentions-list scheme Stonebraker describes, the transaction isn't reliably committed, and the user can't be told it succeeded, until the commit flag reaches disk.",
     "why": "§2.4. The commit-flag page must be forced after all intentions-list pages, which requires a 'selected force out' that no OS buffer manager he knew of provided. Processing the list is made idempotent so recovery can redo it.",
+    "n": 16
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker 1981",
+    "answer": true,
+    "text": "Stonebraker says a buffer manager in user space can't stay unaware of transactions: at commit it must flush the right blocks and then deliver a commit to the operating system.",
+    "why": "§5.1. If the OS provides transactions but the DBMS keeps its own buffer pool, OS functions get duplicated. §5.3: either the OS provides buffering, concurrency control and recovery together, or the DBMS provides all three.",
     "n": 17
    },
    {
@@ -1465,16 +1465,8 @@ window.SETS = [
     "topic": "Stonebraker 1981",
     "answer": false,
     "text": "Stonebraker argues that a first-come-first-served server with no internal parallelism works well on a machine with many disks, since each request can keep all the disks busy.",
-    "why": "§4.3: each request tends to have one disk read outstanding, so at most one disk is active, and long requests delay short ones. A server must otherwise do its own scheduling and multitasking, a painful duplication of OS facilities.",
+    "why": "§4.3: each request tends to have one disk read outstanding, so at most one disk is active, and long requests delay short ones. A server must otherwise do its own scheduling and multitasking, a painful duplication of OS facilities. Splitting work into disk processes trades a task switch per I/O for a message per I/O, and a round-trip message costs about 5,000 instructions on PDP-11/70 UNIX.",
     "n": 21
-   },
-   {
-    "type": "tf",
-    "topic": "Stonebraker 1981",
-    "answer": true,
-    "text": "Stonebraker warns that replacing a task switch per I/O with a message per I/O may not help, because a round-trip message on PDP-11/70 UNIX costs about 5,000 instructions.",
-    "why": "§4.4. A task switch costs from a few hundred instructions to a thousand or more on OSes with 'large' processes. Neither the process-per-user model nor the server model escapes the overhead.",
-    "n": 22
    },
    {
     "type": "tf",
@@ -1482,7 +1474,7 @@ window.SETS = [
     "answer": false,
     "text": "In Stonebraker's example of a 20% pay cut for everyone who earns more than their manager, updating rows in place as they're found is safe because Brown is the only employee who ever qualifies.",
     "why": "§5.2: Smith earns 10,000 under Brown at 11,000. If Brown's pay is cut to 8,800 before Smith is examined, Smith now qualifies too. The outcome depends on execution order unless an intentions list defers the updates.",
-    "n": 23
+    "n": 22
    },
    {
     "type": "tf",
@@ -1490,7 +1482,7 @@ window.SETS = [
     "answer": true,
     "text": "To solve the convoy problem, Stonebraker suggests a special scheduling class in which DBMS processes are never forcibly descheduled but give up the CPU voluntarily.",
     "why": "§4.5. A convoy forms when a process is descheduled while holding a short-term lock on the shared buffer pool. In his conclusion, he says real-time OSs with minimal, efficient services come closest to what a DBMS wants.",
-    "n": 24
+    "n": 23
    },
    {
     "type": "tf",
@@ -1498,47 +1490,31 @@ window.SETS = [
     "answer": false,
     "text": "Stonebraker says a page table describes a file of 1,000 consecutive blocks as compactly as an extent-based file control block does.",
     "why": "§6.1: a file control block stores a starting block and a length, but a page table stores all 1,000 addresses. At 4 bytes per 4 KB page, a 100 MB file needs about 100 KB of page table, which may not stay resident and can cause a second page fault.",
-    "n": 25
+    "n": 24
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": false,
-    "text": "Stonebraker and Pavlo say Google moved its crawl processing off MapReduce because MapReduce couldn't scale to the size of the crawl.",
+    "text": "Stonebraker and Pavlo say Google moved its crawl processing from MapReduce to BigTable because MapReduce couldn't scale to the size of the crawl.",
     "why": "§2.1: Google needed to update the crawl database interactively in real time, and MapReduce was a batch system, so the crawl moved to BigTable. MR was retired in 2014. Hadoop vendors then built SQL engines (Impala, Drill, Presto) directly on HDFS.",
+    "n": 25
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker & Pavlo 2024",
+    "answer": true,
+    "text": "Stonebraker and Pavlo say the problems with denormalizing into nested documents date to the 1970s: duplicated data unless the join is one-to-many, prejoins that aren't necessarily faster, and no data independence.",
+    "why": "§2.3. They see document DBMSs as repeating the object-oriented and XML DBMS arguments about removing impedance mismatch. Almost every NoSQL system later added SQL. MongoDB was the last holdout, in 2021.",
     "n": 26
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": false,
-    "text": "Stonebraker and Pavlo describe column-family systems such as BigTable, Cassandra and HBase as using a columnar data model.",
-    "why": "§2.4: despite the name, column-family is a reduction of the document model with one level of nesting. Columnar storage (§3.1) is a physical layout for OLAP. Column-family systems also copied BigTable's lack of joins and secondary indexes.",
-    "n": 27
-   },
-   {
-    "type": "tf",
-    "topic": "Stonebraker & Pavlo 2024",
-    "answer": true,
-    "text": "Stonebraker and Pavlo note that the problems with denormalizing data into nested documents date to the 1970s: data is duplicated when the relationship isn't one-to-many, prejoins aren't necessarily faster, and data independence is lost.",
-    "why": "§2.3. They see document DBMSs as repeating the object-oriented and XML DBMS arguments about removing impedance mismatch.",
-    "n": 28
-   },
-   {
-    "type": "tf",
-    "topic": "Stonebraker & Pavlo 2024",
-    "answer": false,
-    "text": "Stonebraker and Pavlo say MongoDB was the first major NoSQL DBMS to add a SQL interface.",
-    "why": "§2.3: MongoDB was the last holdout, adding SQL for Atlas in 2021, after DynamoDB (PartiQL), Cassandra (CQL), Aerospike and Couchbase. 'NoSQL' shifted from 'don't use SQL' to 'Not only SQL'.",
-    "n": 29
-   },
-   {
-    "type": "tf",
-    "topic": "Stonebraker & Pavlo 2024",
-    "answer": false,
     "text": "Stonebraker and Pavlo report that, as with JSON support, major RDBMSs took several years to add vector indexes after LLMs went mainstream.",
-    "why": "§2.7: it took less than a year after ChatGPT (late 2022), partly because adding an index is little engineering and vendors integrated libraries like FAISS or DiskANN. JSON support took years. Vector DBMSs are document DBMSs with ANN indexes, and an index is a feature, not a new architecture.",
-    "n": 30
+    "why": "§2.7: it took less than a year after ChatGPT (late 2022), partly because adding an index is little engineering and vendors integrated libraries like FAISS or DiskANN. JSON support took years. Vector DBMSs are document DBMSs with ANN indexes, and an index is a feature, not a new architecture. Array DBMSs, by contrast, remain a niche: scientific users keep bespoke array systems despite SQL:2023's SQL/MDA.",
+    "n": 27
    },
    {
     "type": "tf",
@@ -1546,31 +1522,31 @@ window.SETS = [
     "answer": true,
     "text": "Stonebraker and Pavlo expect OLTP graph workloads to be served mostly by RDBMSs, and graph analytics to work best in main memory on a single node with compact, specialized data structures.",
     "why": "§2.8–2.9. Distributed graph algorithms rarely beat single-node implementations because of communication costs. SQL:2023 added SQL/PGQ, and DuckDB's SQL/PGQ beat a leading graph DBMS by up to 10×.",
-    "n": 31
-   },
-   {
-    "type": "tf",
-    "topic": "Stonebraker & Pavlo 2024",
-    "answer": true,
-    "text": "Stonebraker and Pavlo expect scientific applications to keep using bespoke array systems, even though SQL:2023 added multi-dimensional arrays (SQL/MDA).",
-    "why": "§2.9: array DBMSs remain a niche, and RDBMSs can't store and analyze arrays efficiently despite SQL/MDA. No major cloud provider offers a hosted array DBMS.",
-    "n": 32
+    "n": 28
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": true,
     "text": "Stonebraker and Pavlo give three advantages of column stores: better compression, inner loops that process a whole column with vectorized instructions, and very little per-record storage overhead.",
-    "why": "§3.1. A Volcano-style engine runs each operator once per row, and row stores carry about 20 bytes of header per record. Every data-warehouse vendor has moved from row stores to column stores.",
-    "n": 33
+    "why": "§3.1. A Volcano-style engine runs each operator once per row, and row stores carry about 20 bytes of header per record. Every data-warehouse vendor has moved from row stores to column stores. Don't confuse this with column-family (wide-column) systems like BigTable and Cassandra, which are a reduction of the document model with one level of nesting.",
+    "n": 29
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": false,
-    "text": "Stonebraker and Pavlo credit Amazon Redshift with introducing serverless computing for cloud-native DBMSs.",
+    "text": "Stonebraker and Pavlo credit Amazon Redshift with introducing serverless computing for cloud-native DBMSs, where compute nodes scale per query because storage lives in a separate object store.",
     "why": "§3.2: Snowflake introduced it. Disaggregated storage gives per-query elasticity and lets compute be reassigned, and they expect shared-disk designs to dominate rather than shared-nothing.",
-    "n": 34
+    "n": 30
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker & Pavlo 2024",
+    "answer": true,
+    "text": "Stonebraker and Pavlo say a data lake may have no statistics at all on newly ingested files, which makes adaptive query processing imperative.",
+    "why": "§3.3: applications write open formats (Parquet, ORC) straight to object stores, and lakehouse engines query them. Middleware like Delta Lake, Iceberg and Hudi adds transactional updates. They expect this to be the OLAP archetype for the next ten years.",
+    "n": 31
    },
    {
     "type": "tf",
@@ -1578,15 +1554,31 @@ window.SETS = [
     "answer": true,
     "text": "Stonebraker and Pavlo say custom hardware accelerators for DBMSs are likely to succeed only at large cloud vendors, who can justify $50–100M of R&D and control the whole hardware and software stack.",
     "why": "§3.5. GPU DBMSs outnumber FPGA ones because of libraries like CUDA, but a GPU stalls once data doesn't fit in its memory. Redshift AQUA is an example of cloud-vendor hardware.",
-    "n": 35
+    "n": 32
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": false,
-    "text": "Stonebraker and Pavlo attribute NewSQL's weak adoption mainly to NoSQL systems already providing strong ACID transactions.",
+    "text": "Stonebraker and Pavlo point to Amazon's QLDB, a private ledger without BFT commit, as evidence that decentralized blockchain databases have found a compelling enterprise use case.",
+    "why": "§3.6: Amazon built QLDB after finding no compelling use case for a decentralized blockchain DBMS. Legitimate businesses won't pay about five orders of magnitude in performance, and crypto exchanges themselves run on RDBMSs.",
+    "n": 33
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker & Pavlo 2024",
+    "answer": false,
+    "text": "Stonebraker and Pavlo say Elasticsearch and Solr offer full transactional support, so a corrupted text index can be repaired from a log without taking the system down.",
+    "why": "§2.5: they offer none-to-limited transactions, so recovering from corruption means rebuilding the index from scratch, with significant downtime. Major RDBMSs' full-text search is roughly on par and transactional, but the SQL integration is clunky.",
+    "n": 34
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker & Pavlo 2024",
+    "answer": false,
+    "text": "Stonebraker and Pavlo attribute NewSQL's weak adoption mainly to NoSQL systems such as MongoDB and Cassandra already providing strong ACID transactions when NewSQL arrived in the early 2010s.",
     "why": "§3.4: existing DBMSs were good enough, and companies are risk-averse about migrating OLTP systems. NewSQL vendors also bet wrongly on in-memory systems, since SSDs got cheaper while DRAM stayed expensive. NoSQL vendors later added transactions themselves.",
-    "n": 36
+    "n": 35
    },
    {
     "type": "tf",
@@ -1594,14 +1586,22 @@ window.SETS = [
     "answer": true,
     "text": "Stonebraker and Pavlo note that MySQL was the first DBMS to expose an API for replacing its storage manager, which let Meta replace InnoDB with RocksDB across its MySQL fleet.",
     "why": "§2.2: using embedded key/value stores as storage managers is a 20-year trend. MongoDB similarly switched to WiredTiger in 2014. They add that an RDBMS emulates a KV store easily, but the reverse is hard.",
-    "n": 37
+    "n": 36
    },
    {
     "type": "tf",
     "topic": "Stonebraker & Pavlo 2024",
     "answer": false,
-    "text": "Stonebraker and Pavlo expect LLM-based natural-language interfaces to replace SQL for writing OLTP applications.",
+    "text": "Stonebraker and Pavlo expect LLM-based natural-language interfaces to replace SQL for writing OLTP applications, while OLAP analysts keep writing SQL by hand for precision.",
     "why": "§4: OLTP code generates queries through ORMs, so nobody will write it in natural language. NL may help draft exploratory OLAP queries, which should then be refined in a dashboard because natural language is ambiguous.",
+    "n": 37
+   },
+   {
+    "type": "tf",
+    "topic": "Stonebraker & Pavlo 2024",
+    "answer": true,
+    "text": "Stonebraker and Pavlo name Oracle in the 1980s, MySQL in the 2000s and MongoDB in the 2010s as inferior products that succeeded through strong marketing.",
+    "why": "§4, 'Never underestimate the value of good marketing for bad products'. Other parting lessons: be wary of DBMSs open-sourced by large non-DBMS companies, don't ignore the out-of-box experience (DuckDB), and use SQL rather than relying only on ORMs.",
     "n": 38
    },
    {
@@ -1616,7 +1616,7 @@ window.SETS = [
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": true,
-    "text": "For each size class, Umbra reserves a virtual-memory region as large as the whole buffer pool, so the virtual address space of a size class never fragments, although the physical memory behind it can.",
+    "text": "Umbra reserves, for each size class, a virtual-memory region as large as the whole buffer pool, so a size class's virtual address space never fragments even though physical memory can.",
     "why": "§2.1: frames hold fixed virtual addresses in a private anonymous mmap. pread fills a frame, and on eviction pwrite plus madvise(MADV_DONTNEED) releases the physical memory. Pages start at 64 KiB and double with each size class.",
     "n": 40
    },
@@ -1624,7 +1624,7 @@ window.SETS = [
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": false,
-    "text": "A swizzled swip in Umbra stores a 57-bit memory pointer together with the page's 6-bit size class.",
+    "text": "A swizzled swip in Umbra stores a 57-bit memory pointer together with the page's 6-bit size class, and its lowest bit is set to 1 to mark it as swizzled.",
     "why": "§2.2: a swizzled swip is just the pointer, whose low bit is 0 because of 8-byte alignment. An unswizzled swip has its tag bit set to 1 and stores a 57-bit page number plus a 6-bit size class, enough to load the page.",
     "n": 41
    },
@@ -1640,64 +1640,64 @@ window.SETS = [
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": false,
-    "text": "If the state bits of an Umbra versioned latch hold the value 3, three threads currently hold the latch in shared mode.",
+    "text": "If the 5 state bits of an Umbra versioned latch hold the value 3, three threads currently hold the latch in shared mode and no thread can acquire it exclusively.",
     "why": "§2.3: 0 means unlocked, 1 exclusive, and n + 1 means n shared holders, so 3 means two. The latch is a 64-bit word with 5 state bits and a 59-bit version counter. Optimistic readers don't touch the latch at all; they record the version and validate it afterwards, and a page may even be evicted mid-read (the reserved virtual range then reads as zeros).",
     "n": 43
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
-    "answer": false,
-    "text": "Like LeanStore, Umbra supports only optimistic latching for readers.",
-    "why": "§2.3: Umbra adds a shared mode. Its operators don't know relations are paged, so without shared latches every operator would need validation logic, and read-heavy OLAP queries would keep failing validation when other queries write.",
+    "answer": true,
+    "text": "Unlike LeanStore, which latches readers only optimistically, Umbra also lets readers take a latch in shared mode.",
+    "why": "§2.3: Umbra adds the shared mode. Its operators don't know relations are paged, so without shared latches every operator would need validation logic, and read-heavy OLAP queries would keep failing validation when other queries write.",
     "n": 44
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
-    "answer": true,
-    "text": "Umbra's B+-tree inner nodes always use the smallest page size, 64 KiB, giving a fanout of 8,192.",
-    "why": "§2.4. Leaves are usually 64 KiB as well, but a leaf can use a larger size class when a single tuple doesn't fit.",
+    "answer": false,
+    "text": "When an Umbra leaf page overflows during an insert, the leaf is split around its median tuple identifier and the new separator is pushed into the parent, as in a standard B+-tree.",
+    "why": "§2.4: tuple identifiers are synthetic 8-byte keys that increase strictly monotonically, so Umbra fills nodes completely and never splits leaves. Inner nodes always use 64 KiB pages (fanout 8,192). A new leaf is allocated only when a tuple doesn't fit, and leaves use a PAX layout.",
     "n": 45
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
-    "answer": false,
-    "text": "When an Umbra leaf page overflows, the leaf is split around its median tuple identifier, as in a standard B+-tree.",
-    "why": "§2.4: tuple identifiers are synthetic 8-byte keys that increase strictly monotonically, so Umbra fills nodes completely and never splits leaves. A new leaf is allocated only when a tuple doesn't fit, and leaves use a PAX layout.",
+    "answer": true,
+    "text": "Umbra reuses disk space only for pages of the same size, because after a crash ARIES could otherwise read leftover bytes of a deleted larger page as a smaller page's log sequence number.",
+    "why": "§2.5: e.g. a 128 KiB page replaced by two 64 KiB pages whose log records reached disk but whose data didn't. Apart from that, ARIES handles variable-size pages seamlessly.",
     "n": 46
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
-    "answer": true,
-    "text": "In Umbra, a string of exactly 12 characters is stored entirely inside its 16-byte header.",
-    "why": "§3.1: 4 bytes of length plus up to 12 inline characters. Longer strings keep a 4-character prefix and an 8-byte offset or pointer. Strings never need to be split across pages, because pages can be larger.",
+    "answer": false,
+    "text": "Umbra keeps each relation's random sample up to date by periodically re-sampling the base table, the same approach HyPer uses.",
+    "why": "§3.2: periodic re-sampling is HyPer's approach, and its samples go stale under write-heavy OLTP. Umbra uses scalable online reservoir sampling, plus updatable HyperLogLog sketches on every column for cardinality estimates.",
     "n": 47
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": false,
-    "text": "A string read from a relation has persistent storage duration in Umbra, because it lives in the database.",
-    "why": "§3.1: strings from relations are transient, since their page may be evicted, so they must be copied if materialized. Query constants are persistent, and strings created during the query (e.g. by UPPER) are temporary and garbage-collected.",
+    "text": "When Umbra speculatively unpins a page, it writes the page back if dirty and evicts it immediately, so its physical memory is free for the next request.",
+    "why": "§2.1: following LeanStore, unpinned pages 'cool' in a FIFO queue and are evicted only if they reach its end. Until then they can be re-used. The buffer manager evicts as needed to keep the total size of resident pages within the pool size.",
     "n": 48
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": true,
-    "text": "Umbra first runs each step's IR as interpreted bytecode, and compiles it with LLVM only when its adaptive execution judges that worthwhile.",
-    "why": "§3.3: Umbra generates its own lightweight IR rather than LLVM IR, and plans are modular state machines of steps processed in morsels. Adaptive compilation is largely why Umbra beats HyPer (3.0× on JOB, 1.8× on TPC-H), while raw execution times are comparable.",
+    "text": "In Umbra, a string of exactly 12 characters is stored entirely inside its 16-byte header, with no pointer or offset to an out-of-line body.",
+    "why": "§3.1: 4 bytes of length plus up to 12 inline characters. Longer strings keep a 4-character prefix and an 8-byte offset or pointer. Strings never need to be split across pages, because pages can be larger. Out-of-line strings have three storage classes: persistent (e.g. query constants), transient (anything read from a relation, since its page may be evicted) and temporary (created during the query, e.g. by UPPER).",
     "n": 49
    },
    {
     "type": "tf",
     "topic": "Umbra 2020",
     "answer": true,
-    "text": "When Umbra bypassed its buffer manager entirely and read relations from flat memory-mapped files, query execution time changed by less than 6% on average.",
-    "why": "§4.2: it changed by under 2% when only string materialization was avoided. Cold-cache scans reached 1.13 GiB/s with the buffer manager and 1.15 GiB/s without it, so storage bandwidth is the bottleneck.",
+    "text": "Umbra first runs each step's IR as interpreted bytecode, and compiles it with LLVM only when its adaptive execution judges that worthwhile.",
+    "why": "§3.3: Umbra generates its own lightweight IR rather than LLVM IR, and plans are modular state machines of steps processed in morsels. Adaptive compilation explains, to some extent, Umbra's geometric-mean speedup over HyPer (3.0× on JOB, 1.8× on TPC-H); raw execution times are comparable. Bypassing the buffer manager entirely changed execution time by under 6% on average.",
     "n": 50
    }
   ]
